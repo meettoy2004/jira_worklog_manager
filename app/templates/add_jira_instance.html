@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h2>Add Jira Instance</h2>
+        <a href="{{ url_for('jira.jira_instances') }}" class="btn btn-secondary">Back to Instances</a>
+    </div>
+
+    <div class="form-container">
+        <form method="POST" action="">
+            {{ form.hidden_tag() }}
+
+            <div class="form-group">
+                {{ form.alias.label }}
+                {{ form.alias(class="form-control", placeholder="e.g., Jira 1 - Work Projects, Jira 2 - Client Projects") }}
+                <small>Give this instance a friendly name to identify it</small>
+                {% if form.alias.errors %}
+                    <div class="errors">
+                        {% for error in form.alias.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.base_url.label }}
+                {{ form.base_url(class="form-control", placeholder="https://your-company.atlassian.net") }}
+                <small>Your Jira cloud instance URL (usually ends with atlassian.net)</small>
+                {% if form.base_url.errors %}
+                    <div class="errors">
+                        {% for error in form.base_url.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.jira_username.label }}
+                {{ form.jira_username(class="form-control", placeholder="your.email@company.com") }}
+                <small>The email address you use to log into this Jira instance</small>
+                {% if form.jira_username.errors %}
+                    <div class="errors">
+                        {% for error in form.jira_username.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.api_token.label }}
+                {{ form.api_token(class="form-control", placeholder="Enter your Jira API token") }}
+                <small>Get this from your Jira profile → Account settings → Security → API tokens</small>
+                {% if form.api_token.errors %}
+                    <div class="errors">
+                        {% for error in form.api_token.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group checkbox-group">
+                {{ form.is_active() }}
+                {{ form.is_active.label }}
+            </div>
+
+            <div class="form-actions">
+                {{ form.submit(class="btn btn-primary") }}
+                <a href="{{ url_for('jira.jira_instances') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

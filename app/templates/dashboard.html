@@ -1,0 +1,415 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="dashboard-header">
+        <h2>Welcome to Your Dashboard, {{ current_user.username }}!</h2>
+        <p>Manage your Jira instances and log work across multiple projects.</p>
+    </div>
+
+    <div class="dashboard-stats">
+        <div class="stat-card">
+            <h3>Jira Instances</h3>
+            <div class="stat-number">{{ instances|length }}</div>
+            <p>Configured instances</p>
+            <a href="{{ url_for('jira.jira_instances') }}" class="btn btn-primary">Manage Instances</a>
+        </div>
+        
+        <div class="stat-card">
+            <h3>Quick Actions</h3>
+            <div class="quick-actions">
+                <a href="{{ url_for('worklog.log_work') }}" class="btn btn-primary">Log Work</a>
+                <a href="{{ url_for('reports.reports_dashboard') }}" class="btn btn-primary">View Reports</a>
+                <a href="{{ url_for('jira.add_jira_instance') }}" class="btn btn-secondary">Add Jira Instance</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="jira-instances-overview">
+        <h3>Your Jira Instances</h3>
+        {% if instances %}
+            <div class="instances-grid">
+                {% for instance in instances %}
+                <div class="instance-card {{ 'instance-active' if instance.is_active else 'instance-inactive' }}">
+                    <div class="instance-header">
+                        <h4>{{ instance.alias }}</h4>
+                        <span class="instance-status {{ 'status-active' if instance.is_active else 'status-inactive' }}">
+                            {{ 'Active' if instance.is_active else 'Inactive' }}
+                        </span>
+                    </div>
+                    <div class="instance-details">
+                        <p><strong>URL:</strong> {{ instance.base_url }}</p>
+                        <p><strong>Username:</strong> {{ instance.jira_username }}</p>
+                    </div>
+                    <div class="instance-actions">
+                        <a href="{{ url_for('jira.edit_jira_instance', instance_id=instance.id) }}" class="btn btn-edit">Edit</a>
+                        <a href="{{ url_for('jira.test_connection', instance_id=instance.id) }}" class="btn btn-info" target="_blank">Test</a>
+                        {% if instance.is_active %}
+                            <span class="btn btn-success">Connected</span>
+                        {% else %}
+                            <span class="btn btn-warning">Disabled</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-instances">
+                <p>You haven't configured any Jira instances yet.</p>
+                <a href="{{ url_for('jira.add_jira_instance') }}" class="btn btn-primary">Add Your First Jira Instance</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="coming-soon">
+        <h3>Application Features</h3>
+        <div class="features-grid">
+            <div class="feature-card">
+                <h4>📊 Unified Worklog</h4>
+                <p>Log time across all your Jira instances from one interface</p>
+            </div>
+            <div class="feature-card">
+                <h4>⏱️ Time Tracking</h4>
+                <p>Track time spent with automatic calculations</p>
+            </div>
+            <div class="feature-card">
+                <h4>📈 Reports</h4>
+                <p>View cumulative time across all projects and instances</p>
+            </div>
+            <div class="feature-card">
+                <h4>🔍 Quick Search</h4>
+                <p>Find issues across all configured Jira instances</p>
+            </div>
+            <div class="feature-card">
+                <h4>🔄 Multi-Instance</h4>
+                <p>Manage multiple Jira instances simultaneously</p>
+            </div>
+            <div class="feature-card">
+                <h4>🔒 Secure</h4>
+                <p>Encrypted API token storage and secure connections</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="recent-activity">
+        <h3>Getting Started</h3>
+        <div class="getting-started-steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>Configure Jira Instances</h4>
+                    <p>Add your Jira instances with API credentials</p>
+                    <a href="{{ url_for('jira.add_jira_instance') }}" class="btn btn-sm btn-primary">Add Instance</a>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h4>Log Your Work</h4>
+                    <p>Start logging time across all your projects</p>
+                    <a href="{{ url_for('worklog.log_work') }}" class="btn btn-sm btn-primary">Log Work</a>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h4>View Reports</h4>
+                    <p>Analyze your time across all instances</p>
+                    <a href="{{ url_for('reports.reports_dashboard') }}" class="btn btn-sm btn-primary">View Reports</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.dashboard-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+}
+
+.dashboard-header h2 {
+    margin-bottom: 0.5rem;
+    font-size: 2rem;
+}
+
+.dashboard-header p {
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
+
+.dashboard-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 3rem;
+    font-weight: bold;
+    color: #667eea;
+    margin: 1rem 0;
+}
+
+.quick-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.jira-instances-overview {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 3rem;
+}
+
+.instances-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.instance-card {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.instance-card.instance-active {
+    border-color: #28a745;
+}
+
+.instance-card.instance-inactive {
+    border-color: #6c757d;
+    opacity: 0.7;
+}
+
+.instance-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.instance-header h4 {
+    margin: 0;
+    color: #333;
+}
+
+.instance-status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: bold;
+}
+
+.status-active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-inactive {
+    background: #e2e3e5;
+    color: #383d41;
+}
+
+.instance-details {
+    margin-bottom: 1rem;
+}
+
+.instance-details p {
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+}
+
+.instance-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.no-instances {
+    text-align: center;
+    padding: 3rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 2px dashed #dee2e6;
+}
+
+.coming-soon {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 3rem;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.feature-card {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}
+
+.feature-card h4 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.feature-card p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.recent-activity {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.getting-started-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    margin-top: 1.5rem;
+}
+
+.step {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.step-number {
+    background: #667eea;
+    color: white;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.step-content h4 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.step-content p {
+    margin: 0 0 1rem 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+/* Button enhancements */
+.btn {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.9rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.btn-warning {
+    background: #ffc107;
+    color: #212529;
+}
+
+.btn-edit {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-info {
+    background: #6f42c1;
+    color: white;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+.btn:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .dashboard-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .instances-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .features-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .getting-started-steps {
+        grid-template-columns: 1fr;
+    }
+    
+    .instance-header {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .instance-actions {
+        justify-content: flex-start;
+    }
+}
+</style>
+{% endblock %}

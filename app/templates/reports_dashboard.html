@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h2>📊 Worklog Reports Dashboard</h2>
+        <p>View cumulative time across all your Jira instances</p>
+    </div>
+
+    <!-- Date Range Selector -->
+    <div class="date-range-selector">
+        <h4>Date Range</h4>
+        <div class="range-buttons">
+            <a href="{{ url_for('reports.reports_dashboard', range='today') }}" 
+               class="btn btn-sm {{ 'btn-primary' if date_range == 'today' else 'btn-outline-primary' }}">Today</a>
+            <a href="{{ url_for('reports.reports_dashboard', range='yesterday') }}" 
+               class="btn btn-sm {{ 'btn-primary' if date_range == 'yesterday' else 'btn-outline-primary' }}">Yesterday</a>
+            <a href="{{ url_for('reports.reports_dashboard', range='7days') }}" 
+               class="btn btn-sm {{ 'btn-primary' if date_range == '7days' else 'btn-outline-primary' }}">Last 7 Days</a>
+            <a href="{{ url_for('reports.reports_dashboard', range='30days') }}" 
+               class="btn btn-sm {{ 'btn-primary' if date_range == '30days' else 'btn-outline-primary' }}">Last 30 Days</a>
+            <a href="{{ url_for('reports.reports_dashboard', range='90days') }}" 
+               class="btn btn-sm {{ 'btn-primary' if date_range == '90days' else 'btn-outline-primary' }}">Last 90 Days</a>
+        </div>
+        
+        <div class="custom-range mt-3">
+            <form method="GET" class="form-inline">
+                <label class="mr-2">Custom Range:</label>
+                <input type="date" name="start_date" value="{{ start_date }}" class="form-control form-control-sm mr-2">
+                <span class="mr-2">to</span>
+                <input type="date" name="end_date" value="{{ end_date }}" class="form-control form-control-sm mr-2">
+                <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                <input type="hidden" name="range" value="custom">
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="summary-cards">
+        <div class="summary-card total-time">
+            <h3>Total Time</h3>
+            <div class="summary-value">{{ grand_total }}</div>
+            <div class="summary-label">{{ worklogs|length }} worklogs</div>
+        </div>
+        
+        <div class="summary-card instances">
+            <h3>Jira Instances</h3>
+            <div class="summary-value">{{ instances|length }}</div>
+            <div class="summary-label">Connected</div>
+        </div>
+        
+        <div class="summary-card projects">
+            <h3>Projects</h3>
+            <div class="summary-value">{{ project_totals|length }}</div>
+            <div class="summary-label">Active</div>
+        </div>
+        
+        <div class="summary-card days">
+            <h3>Date Range</h3>
+            <div class="summary-value">{{ start_date }} to {{ end_date }}</div>
+            <div class="summary-label">Period</div>
+        </div>
+    </div>
+
+    <!-- Instance Breakdown -->
+    <div class="report-section">
+        <h3>🔄 Time by Jira Instance</h3>
+        <div class="instance-breakdown">
+            {% for instance_name, data in instance_totals.items() %}
+            <div class="instance-item">
+                <div class="instance-header">
+                    <strong>{{ instance_name }}</strong>
+                    <span class="instance-time">{{ data.hours }}h {{ data.minutes }}m</span>
+                </div>
+                <div class="instance-details">
+                    {{ data.worklog_count }} worklogs
+                </div>
+            </div>
+            {% else %}
+            <p class="no-data">No worklogs found in the selected period</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Project Breakdown -->
+    <div class="report-section">
+        <h3>📂 Time by Project</h3>
+        <div class="project-breakdown">
+            {% for project, data in project_totals.items() %}
+            <div class="project-item">
+                <div class="project-header">
+                    <strong>{{ project }}</strong>
+                    <span class="project-time">{{ data.time }}</span>
+                </div>
+                <div class="progress">
+                    <div class="progress-bar" style="width: {{ (data.seconds / grand_total_seconds * 100) if grand_total_seconds > 0 else 0 }}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Daily Breakdown -->
+    <div class="report-section">
+        <h3>📅 Daily Time Summary</h3>
+        <div class="daily-breakdown">
+            {% for date, time in daily_totals.items()|sort(reverse=true) %}
+            <div class="daily-item">
+                <div class="daily-date">{{ date }}</div>
+                <div class="daily-time">{{ time }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Detailed Worklog Table -->
+    <div class="report-section">
+        <h3>📝 Detailed Worklogs</h3>
+        {% if worklogs %}
+        <div class="worklogs-table-container">
+            <table class="worklogs-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Instance</th>
+                        <th>Project</th>
+                        <th>Issue</th>
+                        <th>Time</th>
+                        <th>Comment</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for worklog in worklogs %}
+                    <tr>
+                        <td>{{ worklog.date }}</td>
+                        <td>
+                            <span class="instance-badge">{{ worklog.instance }}</span>
+                        </td>
+                        <td>
+                            <strong>{{ worklog.project }}</strong>
+                        </td>
+                        <td>
+                            <div class="issue-info">
+                                <strong>{{ worklog.issue_key }}</strong>
+                                <div class="issue-summary">{{ worklog.issue_summary[:50] }}{% if worklog.issue_summary|length > 50 %}...{% endif %}</div>
+                            </div>
+                        </td>
+                        <td class="time-cell">
+                            <span class="time-badge">{{ worklog.time_spent }}</span>
+                        </td>
+                        <td class="comment-cell">
+                            {{ worklog.comment[:100] }}{% if worklog.comment|length > 100 %}...{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="no-worklogs">
+            <p>No worklogs found for the selected period.</p>
+            <a href="{{ url_for('worklog.log_work') }}" class="btn btn-primary">Log Some Work</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Charts Section -->
+    <div class="report-section">
+        <h3>📈 Visual Reports</h3>
+        <div class="charts-container">
+            <div class="chart-placeholder">
+                <p>📊 Charts and graphs will be displayed here</p>
+                <p><small>Visualizations showing time distribution across instances, projects, and days</small></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.summary-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.summary-card.total-time { border-left: 4px solid #28a745; }
+.summary-card.instances { border-left: 4px solid #007bff; }
+.summary-card.projects { border-left: 4px solid #ffc107; }
+.summary-card.days { border-left: 4px solid #6c757d; }
+
+.summary-value {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 0.5rem 0;
+}
+
+.summary-card.total-time .summary-value { color: #28a745; }
+.summary-card.instances .summary-value { color: #007bff; }
+.summary-card.projects .summary-value { color: #ffc107; }
+.summary-card.days .summary-value { color: #6c757d; }
+
+.summary-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.report-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.report-section h3 {
+    margin-bottom: 1rem;
+    color: #333;
+    border-bottom: 2px solid #f8f9fa;
+    padding-bottom: 0.5rem;
+}
+
+.instance-breakdown, .project-breakdown, .daily-breakdown {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.instance-item, .project-item, .daily-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 4px;
+    border-left: 3px solid #007bff;
+}
+
+.project-item {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.project-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.progress {
+    height: 6px;
+    background: #e9ecef;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: #007bff;
+    transition: width 0.3s ease;
+}
+
+.daily-item {
+    border-left-color: #28a745;
+}
+
+.worklogs-table-container {
+    overflow-x: auto;
+}
+
+.worklogs-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.worklogs-table th,
+.worklogs-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.worklogs-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+}
+
+.instance-badge {
+    background: #007bff;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+}
+
+.time-badge {
+    background: #28a745;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.issue-info strong {
+    color: #007bff;
+}
+
+.issue-summary {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+.comment-cell {
+    max-width: 200px;
+    word-wrap: break-word;
+}
+
+.no-data, .no-worklogs {
+    text-align: center;
+    padding: 2rem;
+    color: #6c757d;
+}
+
+.range-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.chart-placeholder {
+    text-align: center;
+    padding: 3rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 2px dashed #dee2e6;
+}
+
+.date-range-selector {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.form-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.mr-2 {
+    margin-right: 0.5rem;
+}
+
+.mt-3 {
+    margin-top: 1rem;
+}
+</style>
+{% endblock %}

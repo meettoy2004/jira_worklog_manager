@@ -1,0 +1,389 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h2>Log Work Across Jira Instances</h2>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+
+    <div class="worklog-container">
+        <div class="worklog-form-section">
+            <h3>📝 Log Your Work</h3>
+            
+            <form id="worklogForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="jiraInstance">Jira Instance</label>
+                        <select id="jiraInstance" class="form-control" required>
+                            <option value="">Select a Jira instance...</option>
+                            {% for instance in instances %}
+                            <option value="{{ instance.id }}">{{ instance.alias }} ({{ instance.base_url }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="project">Project</label>
+                        <select id="project" class="form-control" disabled required>
+                            <option value="">Select a project...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="issueSearch">Search Issue</label>
+                    <input type="text" id="issueSearch" class="form-control" 
+                           placeholder="Search for issues by key or summary..." disabled>
+                    <div id="issueResults" class="search-results"></div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="selectedIssue">Selected Issue</label>
+                        <input type="text" id="selectedIssue" class="form-control" readonly 
+                               placeholder="No issue selected">
+                        <input type="hidden" id="selectedIssueKey">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="workDate">Date</label>
+                        <input type="date" id="workDate" class="form-control" 
+                               value="{{ form.date.data.strftime('%Y-%m-%d') if form.date.data else '' }}" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="timeSpent">Time Spent</label>
+                        <input type="text" id="timeSpent" class="form-control" 
+                               placeholder="e.g., 1h 30m, 45m, 2h" required>
+                        <small>Format: 1h 30m, 45m, 2h, etc.</small>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="comment">Work Description</label>
+                    <textarea id="comment" class="form-control" rows="4" 
+                              placeholder="Describe what you worked on..." required></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="submitWorklog">
+                        Log Work
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="clearForm()">
+                        Clear
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="worklog-preview-section">
+            <h3>👀 Work Preview</h3>
+            <div id="workPreview" class="work-preview">
+                <p class="preview-placeholder">Select an issue and enter details to see preview</p>
+                <div id="previewContent" style="display: none;">
+                    <div class="preview-item">
+                        <strong>Instance:</strong> <span id="previewInstance"></span>
+                    </div>
+                    <div class="preview-item">
+                        <strong>Issue:</strong> <span id="previewIssue"></span>
+                    </div>
+                    <div class="preview-item">
+                        <strong>Date:</strong> <span id="previewDate"></span>
+                    </div>
+                    <div class="preview-item">
+                        <strong>Time:</strong> <span id="previewTime"></span>
+                    </div>
+                    <div class="preview-item">
+                        <strong>Comment:</strong> <span id="previewComment"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quick-tips">
+                <h4>💡 Quick Tips</h4>
+                <ul>
+                    <li>You can log work to multiple Jira instances from one place</li>
+                    <li>Time format: 1h 30m, 45m, 2h, etc.</li>
+                    <li>Comments will be saved in each Jira instance</li>
+                    <li>Worklogs are submitted in real-time to each Jira</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// JavaScript for dynamic form behavior
+document.addEventListener('DOMContentLoaded', function() {
+    const jiraInstanceSelect = document.getElementById('jiraInstance');
+    const projectSelect = document.getElementById('project');
+    const issueSearch = document.getElementById('issueSearch');
+    const issueResults = document.getElementById('issueResults');
+    const selectedIssue = document.getElementById('selectedIssue');
+    const selectedIssueKey = document.getElementById('selectedIssueKey');
+    
+    // When Jira instance changes, load projects
+    jiraInstanceSelect.addEventListener('change', function() {
+        const instanceId = this.value;
+        if (instanceId) {
+            loadProjects(instanceId);
+            projectSelect.disabled = false;
+        } else {
+            projectSelect.disabled = true;
+            projectSelect.innerHTML = '<option value="">Select a project...</option>';
+        }
+        clearIssueSelection();
+    });
+    
+    // When project changes, enable issue search
+    projectSelect.addEventListener('change', function() {
+        if (this.value) {
+            issueSearch.disabled = false;
+            // Clear previous search results
+            clearIssueSelection();
+        } else {
+            issueSearch.disabled = true;
+            clearIssueSelection();
+        }
+    });
+
+    // Search issues when typing
+    let searchTimeout;
+    issueSearch.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            const searchQuery = this.value;
+            const instanceId = jiraInstanceSelect.value;
+            const projectId = projectSelect.value;
+
+            if (searchQuery.length >= 2 && instanceId && projectId) {
+                searchIssues(instanceId, projectId, searchQuery);
+            } else {
+                issueResults.style.display = 'none';
+            }
+        }, 500);
+    });
+
+    // Update preview when form changes
+    const formInputs = document.querySelectorAll('#worklogForm input, #worklogForm textarea, #worklogForm select');
+    formInputs.forEach(input => {
+        input.addEventListener('change', updatePreview);
+        input.addEventListener('input', updatePreview);
+    });
+
+    // Form submission
+    document.getElementById('worklogForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitWorklog();
+    });
+});
+
+function loadProjects(instanceId) {
+    const projectSelect = document.getElementById('project');
+    projectSelect.innerHTML = '<option value="">Loading projects...</option>';
+    projectSelect.disabled = true;
+
+    fetch(`/worklog/get-projects/${instanceId}`)
+        .then(response => response.json())
+        .then(data => {
+            projectSelect.innerHTML = '<option value="">Select a project...</option>';
+
+            if (data.error) {
+                projectSelect.innerHTML = `<option value="">Error: ${data.error}</option>`;
+                flashMessage(`Failed to load projects: ${data.error}`, 'error');
+                return;
+            }
+
+            data.forEach(project => {
+                const option = document.createElement('option');
+                option.value = project.key;
+                option.textContent = project.name;
+                projectSelect.appendChild(option);
+            });
+
+            projectSelect.disabled = false;
+        })
+        .catch(error => {
+            console.error('Error loading projects:', error);
+            projectSelect.innerHTML = '<option value="">Error loading projects</option>';
+            flashMessage('Failed to load projects from Jira instance', 'error');
+        });
+}
+
+function searchIssues(instanceId, projectId, searchQuery) {
+    const issueResults = document.getElementById('issueResults');
+    issueResults.innerHTML = '<div class="search-result-item">Searching...</div>';
+    issueResults.style.display = 'block';
+
+    fetch('/worklog/search-issues', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            instance_id: parseInt(instanceId),
+            project_id: projectId,
+            search_query: searchQuery
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        issueResults.innerHTML = '';
+
+        if (data.error) {
+            issueResults.innerHTML = `<div class="search-result-item">Error: ${data.error}</div>`;
+            flashMessage(`Failed to search issues: ${data.error}`, 'error');
+            return;
+        }
+
+        if (data.length > 0) {
+            data.forEach(issue => {
+                const div = document.createElement('div');
+                div.className = 'search-result-item';
+                div.innerHTML = `
+                    <strong>${issue.key}</strong><br>
+                    <small>${issue.summary}</small><br>
+                    <span class="issue-status">Status: ${issue.status}</span>
+                `;
+                div.onclick = function() {
+                    selectIssue(issue.key, issue.summary);
+                };
+                issueResults.appendChild(div);
+            });
+            issueResults.style.display = 'block';
+        } else {
+            issueResults.innerHTML = '<div class="search-result-item">No issues found</div>';
+            issueResults.style.display = 'block';
+        }
+    })
+    .catch(error => {
+        console.error('Error searching issues:', error);
+        issueResults.innerHTML = '<div class="search-result-item">Error searching issues</div>';
+        flashMessage('Failed to search issues', 'error');
+    });
+}
+
+function selectIssue(issueKey, issueSummary) {
+    document.getElementById('selectedIssue').value = `${issueKey}: ${issueSummary}`;
+    document.getElementById('selectedIssueKey').value = issueKey;
+    document.getElementById('issueResults').style.display = 'none';
+    document.getElementById('issueSearch').value = '';
+    updatePreview();
+}
+
+function clearIssueSelection() {
+    document.getElementById('selectedIssue').value = '';
+    document.getElementById('selectedIssueKey').value = '';
+    document.getElementById('issueSearch').value = '';
+    document.getElementById('issueResults').style.display = 'none';
+    updatePreview();
+}
+
+function updatePreview() {
+    const instanceSelect = document.getElementById('jiraInstance');
+    const selectedInstance = instanceSelect.options[instanceSelect.selectedIndex];
+    const selectedIssue = document.getElementById('selectedIssue').value;
+    const workDate = document.getElementById('workDate').value;
+    const timeSpent = document.getElementById('timeSpent').value;
+    const comment = document.getElementById('comment').value;
+
+    const preview = document.getElementById('previewContent');
+    const placeholder = document.querySelector('.preview-placeholder');
+
+    if (selectedInstance.value && selectedIssue && workDate && timeSpent && comment) {
+        document.getElementById('previewInstance').textContent = selectedInstance.text;
+        document.getElementById('previewIssue').textContent = selectedIssue;
+        document.getElementById('previewDate').textContent = workDate;
+        document.getElementById('previewTime').textContent = timeSpent;
+        document.getElementById('previewComment').textContent = comment;
+
+        preview.style.display = 'block';
+        placeholder.style.display = 'none';
+    } else {
+        preview.style.display = 'none';
+        placeholder.style.display = 'block';
+    }
+}
+
+function submitWorklog() {
+    const submitBtn = document.getElementById('submitWorklog');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Logging...';
+
+    const formData = {
+        instance_id: document.getElementById('jiraInstance').value,
+        issue_key: document.getElementById('selectedIssueKey').value,
+        date: document.getElementById('workDate').value,
+        time_spent: document.getElementById('timeSpent').value,
+        comment: document.getElementById('comment').value
+    };
+
+    // Validate form
+    if (!formData.instance_id || !formData.issue_key || !formData.date || !formData.time_spent || !formData.comment) {
+        flashMessage('Please fill in all required fields', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Log Work';
+        return;
+    }
+
+    fetch('/worklog/submit-worklog', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            flashMessage(data.message, 'success');
+            clearForm();
+        } else {
+            flashMessage('Error: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        flashMessage('Error submitting worklog: ' + error.message, 'error');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Log Work';
+    });
+}
+
+function clearForm() {
+    document.getElementById('worklogForm').reset();
+    document.getElementById('project').disabled = true;
+    document.getElementById('project').innerHTML = '<option value="">Select a project...</option>';
+    document.getElementById('issueSearch').disabled = true;
+    clearIssueSelection();
+    updatePreview();
+}
+
+function flashMessage(message, type) {
+    // Create flash message
+    const flashDiv = document.createElement('div');
+    flashDiv.className = `alert alert-${type}`;
+    flashDiv.textContent = message;
+
+    const flashContainer = document.querySelector('.flash-messages');
+    if (!flashContainer) {
+        const main = document.querySelector('main');
+        const newFlashContainer = document.createElement('div');
+        newFlashContainer.className = 'flash-messages';
+        main.insertBefore(newFlashContainer, main.firstChild);
+    }
+
+    document.querySelector('.flash-messages').appendChild(flashDiv);
+
+    // Remove after 5 seconds
+    setTimeout(() => {
+        flashDiv.remove();
+    }, 5000);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h2>Your Jira Instances</h2>
+        <a href="{{ url_for('jira.add_jira_instance') }}" class="btn btn-primary">Add New Jira Instance</a>
+    </div>
+
+    {% if instances %}
+        <div class="instances-table-container">
+            <table class="instances-table">
+                <thead>
+                    <tr>
+                        <th>Instance Name</th>
+                        <th>URL</th>
+                        <th>Username</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for instance in instances %}
+                    <tr>
+                        <td>
+                            <strong>{{ instance.alias }}</strong>
+                        </td>
+                        <td>{{ instance.base_url }}</td>
+                        <td>{{ instance.jira_username }}</td>
+                        <td>
+                            <span class="status {{ 'status-active' if instance.is_active else 'status-inactive' }}">
+                                {{ 'Active' if instance.is_active else 'Inactive' }}
+                            </span>
+                        </td>
+                        <td class="actions">
+                            <a href="{{ url_for('jira.edit_jira_instance', instance_id=instance.id) }}"
+                               class="btn btn-edit">Edit</a>
+                            <a href="{{ url_for('jira.test_connection', instance_id=instance.id) }}"
+                               class="btn btn-info" target="_blank">Test</a>
+                            <a href="{{ url_for('reports.debug_worklogs', instance_id=instance.id) }}"
+   class="btn btn-warning btn-sm" target="_blank">Debug</a>
+                            <a href="{{ url_for('jira.delete_jira_instance', instance_id=instance.id) }}"
+                               class="btn btn-delete"
+                               onclick="return confirm('Are you sure you want to delete {{ instance.alias }}? This action cannot be undone.')">
+                                Delete
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">🚀</div>
+            <h3>No Jira Instances Configured</h3>
+            <p>Get started by adding your first Jira instance to begin managing worklogs across multiple projects.</p>
+            <a href="{{ url_for('jira.add_jira_instance') }}" class="btn btn-primary">Add Your First Jira Instance</a>
+        </div>
+    {% endif %}
+
+    <div class="help-section">
+        <h4>📖 How to get your Jira API Token</h4>
+        <ol>
+            <li>Log into your Jira instance</li>
+            <li>Click on your profile picture → <strong>Account settings</strong></li>
+            <li>Go to <strong>Security</strong> → <strong>API tokens</strong></li>
+            <li>Click <strong>Create and manage API tokens</strong></li>
+            <li>Create a new token and copy it</li>
+        </ol>
+
+        <h4>🔧 Connection Troubleshooting</h4>
+        <ul>
+            <li>Use the <strong>Test</strong> button to check your connection</li>
+            <li>Ensure your URL format is correct (e.g., https://your-domain.atlassian.net)</li>
+            <li>Verify your API token has the correct permissions</li>
+            <li>Check that your Jira instance is accessible from your network</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

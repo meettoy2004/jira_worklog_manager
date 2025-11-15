@@ -9,9 +9,15 @@ from config import Config
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)
+    password_hash = db.Column(db.String(256), nullable=True)  # Nullable for SSO users
+    email = db.Column(db.String(120), unique=True, nullable=True)
+    full_name = db.Column(db.String(200), nullable=True)
     is_admin = db.Column(db.Boolean, default=False)
     is_manager = db.Column(db.Boolean, default=False)
+    auth_provider_id = db.Column(db.Integer, db.ForeignKey('auth_provider.id'), nullable=True)
+    external_id = db.Column(db.String(256), nullable=True)  # ID from external auth system
+    last_login = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationship to Jira instances
     jira_instances = db.relationship('JiraInstance', backref='owner', lazy=True, cascade='all, delete-orphan')
@@ -24,11 +30,24 @@ class User(UserMixin, db.Model):
     received_invites = db.relationship('TeamInvite', foreign_keys='TeamInvite.member_id',
                                        backref='member', lazy=True, cascade='all, delete-orphan')
 
+    # Relationship to auth provider
+    auth_provider = db.relationship('AuthProvider', backref='users', lazy=True)
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
+        if not self.password_hash:
+            return False
         return check_password_hash(self.password_hash, password)
+
+    def is_local_user(self):
+        """Check if user is using local authentication"""
+        return self.auth_provider_id is None
+
+    def is_external_user(self):
+        """Check if user is using external authentication"""
+        return self.auth_provider_id is not None
 
     def get_team_members(self):
         """Get all accepted team members for this manager"""
@@ -77,3 +96,35 @@ class TeamInvite(db.Model):
 
     def __repr__(self):
         return f'<TeamInvite Manager:{self.manager_id} Member:{self.member_id} Status:{self.status}>'
+
+
+class AuthProvider(db.Model):
+    """Model for external authentication providers (LDAP, AD, FreeIPA, Keycloak)"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    provider_type = db.Column(db.String(50), nullable=False)  # ldap, ad, freeipa, keycloak
+    is_enabled = db.Column(db.Boolean, default=True)
+    is_default = db.Column(db.Boolean, default=False)
+    auto_create_users = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Encrypted configuration JSON
+    config_encrypted = db.Column(db.LargeBinary, nullable=False)
+
+    def set_config(self, config_dict):
+        """Encrypt and store configuration as JSON"""
+        import json
+        fernet = Fernet(Config.CRYPTO_KEY)
+        config_json = json.dumps(config_dict)
+        self.config_encrypted = fernet.encrypt(config_json.encode())
+
+    def get_config(self):
+        """Decrypt and return configuration as dictionary"""
+        import json
+        fernet = Fernet(Config.CRYPTO_KEY)
+        config_json = fernet.decrypt(self.config_encrypted).decode()
+        return json.loads(config_json)
+
+    def __repr__(self):
+        return f'<AuthProvider {self.name} ({self.provider_type})>'

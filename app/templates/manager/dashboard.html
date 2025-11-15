@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="manager-dashboard">
+    <div class="dashboard-header">
+        <h2>Manager Dashboard</h2>
+        <p>Manage your team and view their worklogs</p>
+    </div>
+
+    <div class="manager-stats">
+        <div class="stat-card">
+            <h3>Team Members</h3>
+            <div class="stat-number">{{ team_members|length }}</div>
+            <p>Accepted members</p>
+        </div>
+        <div class="stat-card">
+            <h3>Pending Invites</h3>
+            <div class="stat-number">{{ pending_invites|length }}</div>
+            <p>Waiting for response</p>
+        </div>
+        <div class="stat-card">
+            <h3>Quick Actions</h3>
+            <div class="quick-actions">
+                <a href="{{ url_for('manager.team_reports') }}" class="btn btn-primary">View Team Reports</a>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="invite-section">
+        <h3>Invite Team Member</h3>
+        <form method="POST" action="{{ url_for('manager.invite_member') }}" class="invite-form">
+            {{ form.hidden_tag() }}
+            <div class="form-group">
+                {{ form.member_id.label }}
+                {{ form.member_id(class="form-control") }}
+                {% if form.member_id.choices|length == 0 %}
+                    <p class="text-muted">All users have already been invited to your team.</p>
+                {% endif %}
+            </div>
+            {% if form.member_id.choices|length > 0 %}
+                {{ form.submit(class="btn btn-primary") }}
+            {% endif %}
+        </form>
+    </div>
+
+    {% if team_members %}
+    <div class="team-members-section">
+        <h3>Your Team</h3>
+        <div class="members-grid">
+            {% for member in team_members %}
+            <div class="member-card">
+                <div class="member-info">
+                    <h4>{{ member.username }}</h4>
+                    <p class="member-status">
+                        <span class="badge badge-success">Active Member</span>
+                    </p>
+                </div>
+                <div class="member-actions">
+                    <a href="{{ url_for('manager.team_reports') }}?member_id={{ member.id }}"
+                       class="btn btn-sm btn-primary">
+                        View Reports
+                    </a>
+                    {% for invite in accepted_invites %}
+                        {% if invite.member_id == member.id %}
+                            <a href="{{ url_for('manager.remove_member', invite_id=invite.id) }}"
+                               class="btn btn-sm btn-danger"
+                               onclick="return confirm('Remove {{ member.username }} from your team?')">
+                                Remove
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if pending_invites %}
+    <div class="pending-invites-section">
+        <h3>Pending Invitations</h3>
+        <div class="invites-list">
+            {% for invite in pending_invites %}
+            <div class="invite-card">
+                <div class="invite-info">
+                    <h4>{{ invite.member.username }}</h4>
+                    <p>Invited on: {{ invite.invited_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                    <span class="badge badge-warning">Pending Response</span>
+                </div>
+                <div class="invite-actions">
+                    <a href="{{ url_for('manager.remove_member', invite_id=invite.id) }}"
+                       class="btn btn-sm btn-secondary"
+                       onclick="return confirm('Cancel invite to {{ invite.member.username }}?')">
+                        Cancel Invite
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if rejected_invites %}
+    <div class="rejected-invites-section">
+        <h3>Rejected Invitations</h3>
+        <div class="invites-list">
+            {% for invite in rejected_invites %}
+            <div class="invite-card rejected">
+                <div class="invite-info">
+                    <h4>{{ invite.member.username }}</h4>
+                    <p>Rejected on: {{ invite.responded_at.strftime('%Y-%m-%d %H:%M') if invite.responded_at else 'N/A' }}</p>
+                    <span class="badge badge-danger">Rejected</span>
+                </div>
+                <div class="invite-actions">
+                    <a href="{{ url_for('manager.remove_member', invite_id=invite.id) }}"
+                       class="btn btn-sm btn-secondary"
+                       onclick="return confirm('Remove this rejected invite?')">
+                        Remove
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.manager-dashboard {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.dashboard-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+    border-radius: 10px;
+}
+
+.dashboard-header h2 {
+    margin-bottom: 0.5rem;
+    font-size: 2rem;
+}
+
+.manager-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 3rem;
+    font-weight: bold;
+    color: #007bff;
+    margin: 1rem 0;
+}
+
+.quick-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.invite-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.invite-form {
+    margin-top: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+}
+
+.form-control {
+    width: 100%;
+    max-width: 400px;
+    padding: 0.5rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.text-muted {
+    color: #6c757d;
+    font-style: italic;
+    margin-top: 0.5rem;
+}
+
+.team-members-section,
+.pending-invites-section,
+.rejected-invites-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.members-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.member-card {
+    border: 2px solid #28a745;
+    border-radius: 8px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.member-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.member-info h4 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.member-status {
+    margin: 0.5rem 0;
+}
+
+.member-actions {
+    margin-top: 1rem;
+}
+
+.invites-list {
+    margin-top: 1.5rem;
+}
+
+.invite-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    border: 1px solid #dee2e6;
+}
+
+.invite-card.rejected {
+    background: #f8d7da;
+    border-color: #f5c6cb;
+}
+
+.invite-info h4 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.invite-info p {
+    margin: 0.25rem 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.invite-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+.badge-success {
+    background: #28a745;
+    color: white;
+}
+
+.badge-warning {
+    background: #ffc107;
+    color: #212529;
+}
+
+.badge-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.9rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+.btn:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+    .manager-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .members-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .invite-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+}
+</style>
+{% endblock %}

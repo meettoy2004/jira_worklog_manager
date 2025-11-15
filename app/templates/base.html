@@ -16,7 +16,16 @@
                     <a href="{{ url_for('worklog.log_work') }}">Log Work</a> |
                     <a href="{{ url_for('reports.reports_dashboard') }}">Reports</a> |
                     <a href="{{ url_for('jira.jira_instances') }}">Jira Instances</a> |
-                    <span class="user-welcome">Welcome, {{ current_user.username }}</span> |
+                    {% if current_user.is_manager %}
+                        <a href="{{ url_for('manager.dashboard') }}" class="nav-manager">Manager</a> |
+                    {% endif %}
+                    {% if current_user.is_admin %}
+                        <a href="{{ url_for('admin.dashboard') }}" class="nav-admin">Admin</a> |
+                    {% endif %}
+                    <span class="user-welcome">Welcome, {{ current_user.username }}
+                        {% if current_user.is_admin %}<span class="badge-admin">Admin</span>{% endif %}
+                        {% if current_user.is_manager %}<span class="badge-manager">Manager</span>{% endif %}
+                    </span> |
                     <a href="{{ url_for('auth.logout') }}">Logout</a>
                 {% else %}
                     <a href="{{ url_for('auth.login') }}">Login</a> |

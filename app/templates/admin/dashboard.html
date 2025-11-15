@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <div class="dashboard-header">
+        <h2>Admin Dashboard</h2>
+        <p>Manage users and their roles</p>
+    </div>
+
+    <div class="admin-stats">
+        <div class="stat-card">
+            <h3>Total Users</h3>
+            <div class="stat-number">{{ users|length }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Managers</h3>
+            <div class="stat-number">{{ users|selectattr('is_manager')|list|length }}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Admins</h3>
+            <div class="stat-number">{{ users|selectattr('is_admin')|list|length }}</div>
+        </div>
+    </div>
+
+    <div class="users-section">
+        <h3>All Users</h3>
+        <div class="users-table-wrapper">
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Admin</th>
+                        <th>Manager</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>
+                            <strong>{{ user.username }}</strong>
+                            {% if user.id == current_user.id %}<span class="badge badge-info">You</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if user.is_admin %}
+                                <span class="badge badge-success">Yes</span>
+                            {% else %}
+                                <span class="badge badge-secondary">No</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.is_manager %}
+                                <span class="badge badge-primary">Yes</span>
+                            {% else %}
+                                <span class="badge badge-secondary">No</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                {% if not user.is_manager %}
+                                    <a href="{{ url_for('admin.promote_to_manager', user_id=user.id) }}"
+                                       class="btn btn-sm btn-primary"
+                                       onclick="return confirm('Promote {{ user.username }} to manager?')">
+                                        Promote to Manager
+                                    </a>
+                                {% else %}
+                                    <a href="{{ url_for('admin.demote_from_manager', user_id=user.id) }}"
+                                       class="btn btn-sm btn-warning"
+                                       onclick="return confirm('Remove manager role from {{ user.username }}?')">
+                                        Demote from Manager
+                                    </a>
+                                {% endif %}
+
+                                {% if user.id != current_user.id %}
+                                    {% if not user.is_admin %}
+                                        <a href="{{ url_for('admin.toggle_admin', user_id=user.id) }}"
+                                           class="btn btn-sm btn-success"
+                                           onclick="return confirm('Promote {{ user.username }} to admin? This is a powerful role!')">
+                                            Make Admin
+                                        </a>
+                                    {% else %}
+                                        <a href="{{ url_for('admin.toggle_admin', user_id=user.id) }}"
+                                           class="btn btn-sm btn-danger"
+                                           onclick="return confirm('Remove admin role from {{ user.username }}?')">
+                                            Remove Admin
+                                        </a>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="back-link">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+</div>
+
+<style>
+.admin-dashboard {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.dashboard-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    border-radius: 10px;
+}
+
+.dashboard-header h2 {
+    margin-bottom: 0.5rem;
+    font-size: 2rem;
+}
+
+.admin-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 3rem;
+    font-weight: bold;
+    color: #dc3545;
+    margin: 1rem 0;
+}
+
+.users-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.users-table-wrapper {
+    overflow-x: auto;
+    margin-top: 1.5rem;
+}
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.users-table th {
+    background: #f8f9fa;
+    padding: 1rem;
+    text-align: left;
+    font-weight: bold;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.users-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.users-table tr:hover {
+    background: #f8f9fa;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+.badge-success {
+    background: #28a745;
+    color: white;
+}
+
+.badge-primary {
+    background: #007bff;
+    color: white;
+}
+
+.badge-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.badge-info {
+    background: #17a2b8;
+    color: white;
+    margin-left: 0.5rem;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.back-link {
+    text-align: center;
+}
+
+.btn {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.9rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.btn-warning {
+    background: #ffc107;
+    color: #212529;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+.btn:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+    .admin-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}

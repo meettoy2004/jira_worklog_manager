@@ -1,0 +1,462 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h2>Team Worklog Reports</h2>
+        <p>View your team members' work logs across all Jira instances</p>
+    </div>
+
+    <div class="team-selector">
+        <h4>Filter by Team Member</h4>
+        <form method="GET" class="filter-form">
+            <select name="member_id" class="form-control" onchange="this.form.submit()">
+                <option value="">All Team Members</option>
+                {% for member in team_members %}
+                    <option value="{{ member.id }}" {% if selected_member_id == member.id %}selected{% endif %}>
+                        {{ member.username }}
+                    </option>
+                {% endfor %}
+            </select>
+            <input type="hidden" name="filter" value="{{ filter_type }}">
+            {% if filter_type == 'custom' %}
+                <input type="hidden" name="start_date" value="{{ start_date }}">
+                <input type="hidden" name="end_date" value="{{ end_date }}">
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Date Range Selector -->
+    <div class="date-range-selector">
+        <h4>Date Range</h4>
+        <div class="range-buttons">
+            <a href="{{ url_for('manager.team_reports', filter='today', member_id=selected_member_id or '') }}"
+               class="btn btn-sm {{ 'btn-primary' if filter_type == 'today' else 'btn-outline-primary' }}">Today</a>
+            <a href="{{ url_for('manager.team_reports', filter='yesterday', member_id=selected_member_id or '') }}"
+               class="btn btn-sm {{ 'btn-primary' if filter_type == 'yesterday' else 'btn-outline-primary' }}">Yesterday</a>
+            <a href="{{ url_for('manager.team_reports', filter='7days', member_id=selected_member_id or '') }}"
+               class="btn btn-sm {{ 'btn-primary' if filter_type == '7days' else 'btn-outline-primary' }}">Last 7 Days</a>
+            <a href="{{ url_for('manager.team_reports', filter='30days', member_id=selected_member_id or '') }}"
+               class="btn btn-sm {{ 'btn-primary' if filter_type == '30days' else 'btn-outline-primary' }}">Last 30 Days</a>
+            <a href="{{ url_for('manager.team_reports', filter='90days', member_id=selected_member_id or '') }}"
+               class="btn btn-sm {{ 'btn-primary' if filter_type == '90days' else 'btn-outline-primary' }}">Last 90 Days</a>
+        </div>
+
+        <div class="custom-range mt-3">
+            <form method="GET" class="form-inline">
+                <label class="mr-2">Custom Range:</label>
+                <input type="date" name="start_date" value="{{ start_date }}" class="form-control form-control-sm mr-2">
+                <span class="mr-2">to</span>
+                <input type="date" name="end_date" value="{{ end_date }}" class="form-control form-control-sm mr-2">
+                <input type="hidden" name="filter" value="custom">
+                {% if selected_member_id %}
+                    <input type="hidden" name="member_id" value="{{ selected_member_id }}">
+                {% endif %}
+                <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+            </form>
+        </div>
+    </div>
+
+    {% if not team_members %}
+        <div class="no-team">
+            <h3>No Team Members</h3>
+            <p>You don't have any team members yet. Go to your <a href="{{ url_for('manager.dashboard') }}">Manager Dashboard</a> to invite team members.</p>
+        </div>
+    {% else %}
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+            <div class="summary-card total-time">
+                <h3>Total Time</h3>
+                <div class="summary-value">
+                    {% set hours = (grand_total_seconds // 3600) %}
+                    {% set minutes = ((grand_total_seconds % 3600) // 60) %}
+                    {{ hours }}h {{ minutes }}m
+                </div>
+                <div class="summary-label">{{ worklogs|length }} worklogs</div>
+            </div>
+
+            <div class="summary-card members">
+                <h3>Team Members</h3>
+                <div class="summary-value">{{ team_members|length }}</div>
+                <div class="summary-label">Total members</div>
+            </div>
+
+            <div class="summary-card projects">
+                <h3>Projects</h3>
+                <div class="summary-value">{{ project_totals|length }}</div>
+                <div class="summary-label">Active</div>
+            </div>
+
+            <div class="summary-card days">
+                <h3>Date Range</h3>
+                <div class="summary-value">{{ start_date }} to {{ end_date }}</div>
+                <div class="summary-label">Period</div>
+            </div>
+        </div>
+
+        <!-- Worklogs Table -->
+        {% if worklogs %}
+        <div class="report-section">
+            <h3>Detailed Worklogs</h3>
+            <div class="worklogs-table-wrapper">
+                <table class="worklogs-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Member</th>
+                            <th>Issue</th>
+                            <th>Summary</th>
+                            <th>Time</th>
+                            <th>Comment</th>
+                            <th>Instance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for worklog in worklogs %}
+                        <tr>
+                            <td>{{ worklog.started.split('T')[0] }}</td>
+                            <td><strong>{{ worklog.member_username }}</strong></td>
+                            <td><span class="issue-key">{{ worklog.issue_key }}</span></td>
+                            <td class="issue-summary">{{ worklog.issue_summary }}</td>
+                            <td><strong>{{ worklog.timeSpent }}</strong></td>
+                            <td class="comment-cell">{{ worklog.comment }}</td>
+                            <td><span class="instance-badge">{{ worklog.instance_alias }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Daily Breakdown -->
+        <div class="report-section">
+            <h3>Daily Time Breakdown</h3>
+            <div class="breakdown-grid">
+                {% for date, seconds in daily_totals.items()|sort(reverse=True) %}
+                    {% set hours = (seconds // 3600) %}
+                    {% set minutes = ((seconds % 3600) // 60) %}
+                    <div class="breakdown-item">
+                        <strong>{{ date }}</strong>
+                        <span>{{ hours }}h {{ minutes }}m</span>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Project Breakdown -->
+        <div class="report-section">
+            <h3>Time by Project</h3>
+            <div class="breakdown-grid">
+                {% for project, seconds in project_totals.items()|sort %}
+                    {% set hours = (seconds // 3600) %}
+                    {% set minutes = ((seconds % 3600) // 60) %}
+                    <div class="breakdown-item">
+                        <strong>{{ project }}</strong>
+                        <span>{{ hours }}h {{ minutes }}m</span>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Instance Breakdown -->
+        <div class="report-section">
+            <h3>Time by Jira Instance</h3>
+            <div class="breakdown-grid">
+                {% for instance, seconds in instance_totals.items()|sort %}
+                    {% set hours = (seconds // 3600) %}
+                    {% set minutes = ((seconds % 3600) // 60) %}
+                    <div class="breakdown-item">
+                        <strong>{{ instance }}</strong>
+                        <span>{{ hours }}h {{ minutes }}m</span>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+            <div class="no-worklogs">
+                <h3>No Worklogs Found</h3>
+                <p>No worklogs were found for the selected date range and team members.</p>
+            </div>
+        {% endif %}
+
+        <div class="back-link">
+            <a href="{{ url_for('manager.dashboard') }}" class="btn btn-secondary">Back to Manager Dashboard</a>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+    border-radius: 10px;
+}
+
+.page-header h2 {
+    margin: 0 0 0.5rem 0;
+    font-size: 2rem;
+}
+
+.page-header p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+.team-selector {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.team-selector h4 {
+    margin: 0 0 1rem 0;
+}
+
+.filter-form {
+    display: flex;
+    gap: 1rem;
+}
+
+.date-range-selector {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.date-range-selector h4 {
+    margin: 0 0 1rem 0;
+}
+
+.range-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.form-inline {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.mt-3 {
+    margin-top: 1rem;
+}
+
+.mr-2 {
+    margin-right: 0.5rem;
+}
+
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+.summary-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.summary-card h3 {
+    margin: 0 0 1rem 0;
+    color: #6c757d;
+    font-size: 1rem;
+}
+
+.summary-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #007bff;
+    margin-bottom: 0.5rem;
+}
+
+.summary-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.report-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.report-section h3 {
+    margin: 0 0 1.5rem 0;
+    color: #333;
+}
+
+.worklogs-table-wrapper {
+    overflow-x: auto;
+}
+
+.worklogs-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.worklogs-table th {
+    background: #f8f9fa;
+    padding: 1rem;
+    text-align: left;
+    font-weight: bold;
+    border-bottom: 2px solid #dee2e6;
+    white-space: nowrap;
+}
+
+.worklogs-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.worklogs-table tr:hover {
+    background: #f8f9fa;
+}
+
+.issue-key {
+    background: #e7f3ff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-family: monospace;
+    color: #0056b3;
+    font-weight: bold;
+}
+
+.issue-summary {
+    max-width: 300px;
+}
+
+.comment-cell {
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.instance-badge {
+    background: #f8f9fa;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.breakdown-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.breakdown-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #007bff;
+}
+
+.no-team,
+.no-worklogs {
+    background: white;
+    padding: 3rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.back-link {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.btn {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.9rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-outline-primary {
+    background: white;
+    color: #007bff;
+    border: 1px solid #007bff;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.85rem;
+}
+
+.btn:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+}
+
+.form-control {
+    padding: 0.5rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.form-control-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+    .summary-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .range-buttons {
+        flex-direction: column;
+    }
+
+    .form-inline {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .breakdown-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}

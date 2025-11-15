@@ -1,0 +1,474 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-provider-form-page">
+    <div class="page-header">
+        <h2>{{ title }}</h2>
+        <p>Configure authentication provider settings</p>
+    </div>
+
+    <div class="form-container">
+        <form method="POST" id="providerForm">
+            {{ form.hidden_tag() }}
+
+            <div class="form-section">
+                <h3>Basic Information</h3>
+
+                <div class="form-group">
+                    {{ form.name.label }}
+                    {{ form.name(class="form-control", placeholder="e.g., Company LDAP") }}
+                    {% if form.name.errors %}
+                        <div class="error-message">{{ form.name.errors[0] }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.provider_type.label }}
+                    {{ form.provider_type(class="form-control", id="providerType", onchange="updateFormFields()") }}
+                    {% if form.provider_type.errors %}
+                        <div class="error-message">{{ form.provider_type.errors[0] }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group checkbox-group">
+                    {{ form.is_enabled(id="is_enabled") }}
+                    {{ form.is_enabled.label }}
+                </div>
+
+                <div class="form-group checkbox-group">
+                    {{ form.is_default(id="is_default") }}
+                    {{ form.is_default.label }}
+                    <small class="help-text">Try this provider first after local authentication</small>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    {{ form.auto_create_users(id="auto_create_users") }}
+                    {{ form.auto_create_users.label }}
+                    <small class="help-text">Automatically create user accounts on first login</small>
+                </div>
+            </div>
+
+            <!-- LDAP/AD/FreeIPA Fields -->
+            <div class="form-section ldap-fields" id="ldapFields">
+                <h3>LDAP/AD/FreeIPA Configuration</h3>
+
+                <div class="form-group">
+                    {{ form.server_uri.label }}
+                    {{ form.server_uri(class="form-control", placeholder="ldap://ldap.example.com:389 or ldaps://ldap.example.com:636") }}
+                    <small class="help-text">Use ldaps:// for SSL/TLS, ldap:// for plain or StartTLS</small>
+                    {% if form.server_uri.errors %}
+                        <div class="error-message">{{ form.server_uri.errors[0] }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group ad-only" id="domainField">
+                    {{ form.domain.label }}
+                    {{ form.domain(class="form-control", placeholder="example.com") }}
+                    <small class="help-text">Active Directory domain name</small>
+                </div>
+
+                <div class="form-group">
+                    {{ form.base_dn.label }}
+                    {{ form.base_dn(class="form-control", placeholder="dc=example,dc=com") }}
+                    {% if form.base_dn.errors %}
+                        <div class="error-message">{{ form.base_dn.errors[0] }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group ldap-only" id="bindDnField">
+                    {{ form.bind_dn_template.label }}
+                    {{ form.bind_dn_template(class="form-control", placeholder="uid={username},ou=people,dc=example,dc=com") }}
+                    <small class="help-text">Use {username} as placeholder. FreeIPA auto-generates this.</small>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    {{ form.use_ssl(id="use_ssl") }}
+                    {{ form.use_ssl.label }}
+                    <small class="help-text">Use SSL/TLS encryption (recommended)</small>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    {{ form.start_tls(id="start_tls") }}
+                    {{ form.start_tls.label }}
+                    <small class="help-text">Use StartTLS (not needed if using ldaps://)</small>
+                </div>
+
+                <div class="form-group">
+                    {{ form.search_filter.label }}
+                    {{ form.search_filter(class="form-control", placeholder="(uid={username})") }}
+                    <small class="help-text">LDAP search filter. Use {username} as placeholder.</small>
+                </div>
+
+                <div class="form-group">
+                    {{ form.test_bind_dn.label }}
+                    {{ form.test_bind_dn(class="form-control", placeholder="cn=admin,dc=example,dc=com") }}
+                    <small class="help-text">Admin/service account for testing connections and searching users</small>
+                </div>
+
+                <div class="form-group">
+                    {{ form.test_bind_password.label }}
+                    {{ form.test_bind_password(class="form-control", placeholder="Leave blank to keep existing") }}
+                    <small class="help-text">Password for test/admin account</small>
+                </div>
+            </div>
+
+            <!-- Keycloak Fields -->
+            <div class="form-section keycloak-fields" id="keycloakFields" style="display: none;">
+                <h3>Keycloak/OIDC Configuration</h3>
+
+                <div class="form-group">
+                    {{ form.server_uri.label(text="Server URL") }}
+                    {{ form.server_uri(class="form-control", placeholder="https://keycloak.example.com") }}
+                    <small class="help-text">Base URL of your Keycloak server</small>
+                </div>
+
+                <div class="form-group">
+                    {{ form.realm.label }}
+                    {{ form.realm(class="form-control", placeholder="master") }}
+                    {% if form.realm.errors %}
+                        <div class="error-message">{{ form.realm.errors[0] }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.client_id.label }}
+                    {{ form.client_id(class="form-control", placeholder="jira-worklog-manager") }}
+                    {% if form.client_id.errors %}
+                        <div class="error-message">{{ form.client_id.errors[0] }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.client_secret.label }}
+                    {{ form.client_secret(class="form-control", placeholder="Leave blank to keep existing") }}
+                    <small class="help-text">OAuth2 client secret from Keycloak</small>
+                </div>
+
+                <div class="form-group">
+                    {{ form.admin_username.label }}
+                    {{ form.admin_username(class="form-control", placeholder="admin") }}
+                    <small class="help-text">Optional: For user search and admin operations</small>
+                </div>
+
+                <div class="form-group">
+                    {{ form.admin_password.label }}
+                    {{ form.admin_password(class="form-control", placeholder="Leave blank to keep existing") }}
+                    <small class="help-text">Optional: Admin password for Keycloak admin API</small>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    {{ form.verify_ssl(id="verify_ssl") }}
+                    {{ form.verify_ssl.label }}
+                    <small class="help-text">Verify SSL certificates (uncheck for self-signed certs in testing)</small>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                {{ form.submit(class="btn btn-primary btn-lg") }}
+                <a href="{{ url_for('admin.auth_providers') }}" class="btn btn-secondary btn-lg">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="help-section">
+        <h3>Configuration Help</h3>
+        <div class="help-cards">
+            <div class="help-card">
+                <h4>LDAP</h4>
+                <p>Generic LDAP directory (OpenLDAP, etc.)</p>
+                <ul>
+                    <li>Server URI: ldap:// or ldaps://</li>
+                    <li>Bind DN Template required</li>
+                    <li>Base DN for user searches</li>
+                </ul>
+            </div>
+            <div class="help-card">
+                <h4>Active Directory</h4>
+                <p>Microsoft Active Directory</p>
+                <ul>
+                    <li>Requires domain name</li>
+                    <li>Supports UPN and domain\user</li>
+                    <li>NTLM authentication</li>
+                </ul>
+            </div>
+            <div class="help-card">
+                <h4>FreeIPA</h4>
+                <p>Red Hat Identity Management</p>
+                <ul>
+                    <li>Auto-generates bind DN</li>
+                    <li>cn=users container</li>
+                    <li>Supports ipaUniqueID</li>
+                </ul>
+            </div>
+            <div class="help-card">
+                <h4>Keycloak/OIDC</h4>
+                <p>OAuth2/OpenID Connect</p>
+                <ul>
+                    <li>Requires client ID and secret</li>
+                    <li>Enable Direct Access Grants in client</li>
+                    <li>Token-based authentication</li>
+                </ul>
+            </div>
+        </div>
+        <p class="help-footer">
+            For detailed configuration instructions, see
+            <a href="https://github.com/your-repo/jira-worklog-manager/blob/main/SSO_AUTHENTICATION.md" target="_blank">
+                SSO_AUTHENTICATION.md
+            </a>
+        </p>
+    </div>
+</div>
+
+<style>
+.auth-provider-form-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    color: white;
+    border-radius: 10px;
+}
+
+.page-header h2 {
+    margin: 0 0 0.5rem 0;
+    font-size: 2rem;
+}
+
+.page-header p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+.form-container {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.form-section {
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.form-section:last-of-type {
+    border-bottom: none;
+}
+
+.form-section h3 {
+    margin: 0 0 1.5rem 0;
+    color: #111827;
+    font-size: 1.25rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.3s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+.checkbox-group label {
+    margin: 0;
+    font-weight: 500;
+}
+
+.help-text {
+    display: block;
+    margin-top: 0.25rem;
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.error-message {
+    margin-top: 0.25rem;
+    color: #ef4444;
+    font-size: 0.875rem;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.help-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.help-section h3 {
+    margin: 0 0 1.5rem 0;
+    color: #111827;
+}
+
+.help-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.help-card {
+    background: #f9fafb;
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 3px solid #6366f1;
+}
+
+.help-card h4 {
+    margin: 0 0 0.5rem 0;
+    color: #6366f1;
+}
+
+.help-card p {
+    margin: 0 0 0.75rem 0;
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.help-card ul {
+    margin: 0;
+    padding-left: 1.25rem;
+    font-size: 0.875rem;
+    color: #374151;
+}
+
+.help-card li {
+    margin-bottom: 0.25rem;
+}
+
+.help-footer {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+.help-footer a {
+    color: #6366f1;
+    text-decoration: none;
+}
+
+.help-footer a:hover {
+    text-decoration: underline;
+}
+
+.btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 1rem;
+    font-weight: 500;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: #6366f1;
+    color: white;
+}
+
+.btn-secondary {
+    background: #6b7280;
+    color: white;
+}
+
+.btn-lg {
+    padding: 1rem 2rem;
+}
+
+.btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .help-cards {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+function updateFormFields() {
+    const providerType = document.getElementById('providerType').value;
+    const ldapFields = document.getElementById('ldapFields');
+    const keycloakFields = document.getElementById('keycloakFields');
+    const domainField = document.getElementById('domainField');
+    const bindDnField = document.getElementById('bindDnField');
+
+    // Hide all provider-specific sections first
+    ldapFields.style.display = 'none';
+    keycloakFields.style.display = 'none';
+    if (domainField) domainField.style.display = 'none';
+    if (bindDnField) bindDnField.style.display = 'none';
+
+    // Show relevant sections based on provider type
+    if (providerType === 'ldap' || providerType === 'ad' || providerType === 'freeipa') {
+        ldapFields.style.display = 'block';
+
+        if (providerType === 'ad' && domainField) {
+            domainField.style.display = 'block';
+        }
+
+        if (providerType === 'ldap' && bindDnField) {
+            bindDnField.style.display = 'block';
+        }
+    } else if (providerType === 'keycloak') {
+        keycloakFields.style.display = 'block';
+    }
+}
+
+// Initialize form on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateFormFields();
+});
+</script>
+{% endblock %}

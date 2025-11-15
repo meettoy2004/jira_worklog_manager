@@ -22,6 +22,20 @@
         </div>
     </div>
 
+    <div class="quick-actions">
+        <h3>Quick Actions</h3>
+        <div class="action-buttons-grid">
+            <a href="{{ url_for('admin.auth_providers') }}" class="btn btn-primary btn-lg">
+                <span class="btn-icon">🔐</span>
+                Authentication Providers
+            </a>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-lg">
+                <span class="btn-icon">🏠</span>
+                Back to Dashboard
+            </a>
+        </div>
+    </div>
+
     <div class="users-section">
         <h3>All Users</h3>
         <div class="users-table-wrapper">
@@ -124,7 +138,40 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.quick-actions {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     margin-bottom: 3rem;
+}
+
+.quick-actions h3 {
+    margin: 0 0 1.5rem 0;
+    color: #333;
+}
+
+.action-buttons-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.btn-lg {
+    padding: 1.5rem;
+    font-size: 1.1rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.btn-icon {
+    font-size: 1.5rem;
 }
 
 .stat-card {

@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-providers-page">
+    <div class="page-header">
+        <h2>Authentication Providers</h2>
+        <p>Configure external authentication systems (LDAP, Active Directory, FreeIPA, Keycloak)</p>
+    </div>
+
+    <div class="action-bar">
+        <a href="{{ url_for('admin.add_auth_provider') }}" class="btn btn-primary">
+            <span class="btn-icon">➕</span> Add Authentication Provider
+        </a>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
+            <span class="btn-icon">🔙</span> Back to Admin Dashboard
+        </a>
+    </div>
+
+    {% if providers %}
+    <div class="providers-grid">
+        {% for provider in providers %}
+        <div class="provider-card {{ 'provider-enabled' if provider.is_enabled else 'provider-disabled' }}">
+            <div class="provider-header">
+                <div class="provider-title">
+                    <h3>{{ provider.name }}</h3>
+                    <span class="provider-type-badge {{ provider.provider_type }}">
+                        {% if provider.provider_type == 'ldap' %}LDAP
+                        {% elif provider.provider_type == 'ad' %}Active Directory
+                        {% elif provider.provider_type == 'freeipa' %}FreeIPA
+                        {% elif provider.provider_type == 'keycloak' %}Keycloak/OIDC
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="provider-status">
+                    {% if provider.is_enabled %}
+                        <span class="badge badge-success">Enabled</span>
+                    {% else %}
+                        <span class="badge badge-secondary">Disabled</span>
+                    {% endif %}
+                    {% if provider.is_default %}
+                        <span class="badge badge-primary">Default</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="provider-info">
+                <div class="info-row">
+                    <span class="info-label">Auto-create Users:</span>
+                    <span class="info-value">{{ 'Yes' if provider.auto_create_users else 'No' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Created:</span>
+                    <span class="info-value">{{ provider.created_at.strftime('%Y-%m-%d') if provider.created_at else 'N/A' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Last Updated:</span>
+                    <span class="info-value">{{ provider.updated_at.strftime('%Y-%m-%d') if provider.updated_at else 'N/A' }}</span>
+                </div>
+            </div>
+
+            <div class="provider-actions">
+                <button onclick="testConnection({{ provider.id }}, '{{ provider.name }}')" class="btn btn-sm btn-info">
+                    Test Connection
+                </button>
+                <a href="{{ url_for('admin.edit_auth_provider', provider_id=provider.id) }}" class="btn btn-sm btn-primary">
+                    Edit
+                </a>
+                <a href="{{ url_for('admin.toggle_auth_provider', provider_id=provider.id) }}" class="btn btn-sm {{ 'btn-warning' if provider.is_enabled else 'btn-success' }}">
+                    {{ 'Disable' if provider.is_enabled else 'Enable' }}
+                </a>
+                <a href="{{ url_for('admin.delete_auth_provider', provider_id=provider.id) }}"
+                   class="btn btn-sm btn-danger"
+                   onclick="return confirm('Are you sure you want to delete {{ provider.name }}? This cannot be undone.')">
+                    Delete
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="no-providers">
+        <div class="empty-state">
+            <span class="empty-icon">🔐</span>
+            <h3>No Authentication Providers Configured</h3>
+            <p>Add an authentication provider to enable SSO and external authentication.</p>
+            <a href="{{ url_for('admin.add_auth_provider') }}" class="btn btn-primary btn-lg">
+                Add Your First Provider
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.auth-providers-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    color: white;
+    border-radius: 10px;
+}
+
+.page-header h2 {
+    margin: 0 0 0.5rem 0;
+    font-size: 2rem;
+}
+
+.page-header p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+.action-bar {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.providers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 2rem;
+}
+
+.provider-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+    border-left: 4px solid #6366f1;
+    transition: all 0.3s ease;
+}
+
+.provider-card:hover {
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.provider-card.provider-disabled {
+    opacity: 0.7;
+    border-left-color: #9ca3af;
+}
+
+.provider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.provider-title h3 {
+    margin: 0 0 0.5rem 0;
+    color: #111827;
+}
+
+.provider-type-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    background: #e0e7ff;
+    color: #4f46e5;
+}
+
+.provider-type-badge.ad {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.provider-type-badge.freeipa {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.provider-type-badge.keycloak {
+    background: #fce7f3;
+    color: #9f1239;
+}
+
+.provider-status {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-end;
+}
+
+.provider-info {
+    margin-bottom: 1.5rem;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.info-label {
+    font-weight: 600;
+    color: #6b7280;
+}
+
+.info-value {
+    color: #111827;
+}
+
+.provider-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.no-providers {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 4rem 2rem;
+}
+
+.empty-state {
+    text-align: center;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+    color: #111827;
+    margin: 0 0 1rem 0;
+}
+
+.empty-state p {
+    color: #6b7280;
+    margin: 0 0 2rem 0;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+.badge-success {
+    background: #10b981;
+    color: white;
+}
+
+.badge-secondary {
+    background: #6b7280;
+    color: white;
+}
+
+.badge-primary {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.9rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: #6366f1;
+    color: white;
+}
+
+.btn-secondary {
+    background: #6b7280;
+    color: white;
+}
+
+.btn-info {
+    background: #06b6d4;
+    color: white;
+}
+
+.btn-success {
+    background: #10b981;
+    color: white;
+}
+
+.btn-warning {
+    background: #f59e0b;
+    color: white;
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.85rem;
+}
+
+.btn-lg {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+}
+
+.btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.btn-icon {
+    margin-right: 0.25rem;
+}
+
+@media (max-width: 768px) {
+    .providers-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .action-bar {
+        flex-direction: column;
+    }
+
+    .provider-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .provider-status {
+        align-items: flex-start;
+    }
+}
+</style>
+
+<script>
+function testConnection(providerId, providerName) {
+    const button = event.target;
+    button.disabled = true;
+    button.textContent = 'Testing...';
+
+    fetch(`/admin/auth-providers/test/${providerId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`✅ Connection successful!\n\n${data.message}`);
+            } else {
+                alert(`❌ Connection failed!\n\n${data.message}`);
+            }
+        })
+        .catch(error => {
+            alert(`❌ Error testing connection:\n\n${error.message}`);
+        })
+        .finally(() => {
+            button.disabled = false;
+            button.textContent = 'Test Connection';
+        });
+}
+</script>
+{% endblock %}

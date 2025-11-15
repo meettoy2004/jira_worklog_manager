@@ -27,15 +27,15 @@ def add_jira_instance():
             flash('An instance with this name already exists.', 'error')
             return render_template('add_jira_instance.html', form=form)
 
-        # Create new Jira instance
+        # Create new Jira instance with password
         jira_instance = JiraInstance(
             user_id=current_user.id,
             alias=form.alias.data,
-            base_url=form.base_url.data.rstrip('/'),  # Remove trailing slash
+            base_url=form.base_url.data.rstrip('/'),
             jira_username=form.jira_username.data,
             is_active=form.is_active.data
         )
-        jira_instance.set_api_token(form.api_token.data)
+        jira_instance.set_jira_password(form.jira_password.data)
 
         db.session.add(jira_instance)
         db.session.commit()
@@ -61,16 +61,16 @@ def edit_jira_instance(instance_id):
         instance.jira_username = form.jira_username.data
         instance.is_active = form.is_active.data
 
-        # Only update API token if a new one was provided
-        if form.api_token.data and form.api_token.data != "********":
-            instance.set_api_token(form.api_token.data)
+        # Only update password if a new one was provided
+        if form.jira_password.data and form.jira_password.data != "********":
+            instance.set_jira_password(form.jira_password.data)
 
         db.session.commit()
         flash('Jira instance updated successfully!', 'success')
         return redirect(url_for('jira.jira_instances'))
 
-    # Set a placeholder for the API token field
-    form.api_token.data = "********"
+    # Set a placeholder for the password field
+    form.jira_password.data = "********"
     return render_template('edit_jira_instance.html', form=form, instance=instance)
 
 
@@ -91,7 +91,7 @@ def delete_jira_instance(instance_id):
 @jira_bp.route('/test-connection/<int:instance_id>')
 @login_required
 def test_connection(instance_id):
-    """Test Jira connection for debugging with SSL handling"""
+    """Test Jira connection for debugging with username/password"""
     instance = JiraInstance.query.filter_by(
         id=instance_id,
         user_id=current_user.id
@@ -99,7 +99,6 @@ def test_connection(instance_id):
 
     try:
         import requests
-        import ssl
         import urllib3
 
         # Disable SSL warnings for testing
@@ -107,23 +106,22 @@ def test_connection(instance_id):
 
         test_url = f"{instance.base_url}/rest/api/3/serverInfo"
 
-        # Try with SSL verification disabled first
+        # Try with username/password authentication
         try:
             response = requests.get(test_url,
-                                    auth=(instance.jira_username, instance.get_api_token()),
+                                    auth=(instance.jira_username, instance.get_jira_password()),
                                     timeout=10,
-                                    verify=False)  # Disable SSL verification
+                                    verify=False)
 
             if response.status_code == 200:
                 server_info = response.json()
                 return f"""
-                ✅ Connection successful (SSL verification disabled)<br>
+                ✅ Connection successful (Username/Password)<br>
                 ✅ Jira Server: {server_info.get('serverTitle', 'Unknown')}<br>
                 ✅ Version: {server_info.get('version', 'Unknown')}<br>
                 ✅ API Version: 3<br>
                 <br>
-                <strong>Note:</strong> Connected with SSL verification disabled.<br>
-                This is safe for internal/private Jira instances.
+                <strong>Note:</strong> Connected using username/password authentication.
                 """
             else:
                 return f"❌ Connection failed: {response.status_code} - {response.text}<br>"

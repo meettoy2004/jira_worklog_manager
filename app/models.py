@@ -26,16 +26,16 @@ class JiraInstance(db.Model):
     alias = db.Column(db.String(100), nullable=False)
     base_url = db.Column(db.String(200), nullable=False)
     jira_username = db.Column(db.String(200), nullable=False)
-    api_token_encrypted = db.Column(db.LargeBinary, nullable=False)
+    jira_password_encrypted = db.Column(db.LargeBinary, nullable=False)
     is_active = db.Column(db.Boolean, default=True)
 
-    def set_api_token(self, api_token):
+    def set_jira_password(self, password):
         fernet = Fernet(Config.CRYPTO_KEY)
-        self.api_token_encrypted = fernet.encrypt(api_token.encode())
+        self.jira_password_encrypted = fernet.encrypt(password.encode())
 
-    def get_api_token(self):
+    def get_jira_password(self):
         fernet = Fernet(Config.CRYPTO_KEY)
-        return fernet.decrypt(self.api_token_encrypted).decode()
+        return fernet.decrypt(self.jira_password_encrypted).decode()
 
     def __repr__(self):
         return f'<JiraInstance {self.alias}>'

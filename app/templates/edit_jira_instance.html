@@ -51,6 +51,19 @@
             </div>
 
             <div class="form-group">
+                {{ form.jira_password.label }}
+                {{ form.jira_password(class="form-control", placeholder="Leave blank to keep current password") }}
+                <small>Only enter a new password if you want to change it. Current password is hidden for security.</small>
+                {% if form.jira_password.errors %}
+                    <div class="errors">
+                        {% for error in form.jira_password.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
                 {{ form.api_token.label }}
                 {{ form.api_token(class="form-control", placeholder="Leave as is to keep current token") }}
                 <small>Only enter a new token if you want to change it. Current token is hidden for security.</small>

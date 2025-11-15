@@ -19,7 +19,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 def get_jira_client(instance):
-    """Create and return a JIRA client for the given instance with SSL handling"""
+    """Create and return a JIRA client for the given instance with username/password"""
     try:
         logger.info(f"Attempting to connect to Jira instance: {instance.alias}")
         logger.info(f"URL: {instance.base_url}, Username: {instance.jira_username}")
@@ -28,7 +28,7 @@ def get_jira_client(instance):
         test_url = f"{instance.base_url}/rest/api/3/serverInfo"
         try:
             response = requests.get(test_url,
-                                    auth=(instance.jira_username, instance.get_api_token()),
+                                    auth=(instance.jira_username, instance.get_jira_password()),
                                     timeout=10,
                                     verify=False)
             logger.info(f"Connectivity test: {response.status_code}")
@@ -37,15 +37,14 @@ def get_jira_client(instance):
                 return None
         except requests.exceptions.SSLError as ssl_error:
             logger.warning(f"SSL certificate warning (this is normal for internal instances): {ssl_error}")
-            # Continue anyway - we'll disable SSL verification
         except requests.exceptions.RequestException as e:
             logger.error(f"Network error testing connectivity: {e}")
             return None
 
-        # Create JIRA client with SSL verification disabled
+        # Create JIRA client with username/password authentication
         jira_client = JIRA(
             server=instance.base_url,
-            basic_auth=(instance.jira_username, instance.get_api_token()),
+            basic_auth=(instance.jira_username, instance.get_jira_password()),
             options={
                 'verify': False,
                 'timeout': 30,
@@ -94,7 +93,7 @@ def get_projects(instance_id):
         # Create JIRA client
         jira_client = get_jira_client(instance)
         if not jira_client:
-            error_msg = f"Could not connect to Jira instance: {instance.alias}. Please check your URL and API token."
+            error_msg = f"Could not connect to Jira instance: {instance.alias}. Please check your URL and credentials."
             logger.error(error_msg)
             return jsonify({'error': error_msg}), 400
 
@@ -163,8 +162,8 @@ def search_issues_direct_api(instance, project_id, search_query):
 
     logger.info(f"JQL Query: {jql}")
 
-    # Prepare authentication
-    auth_string = f"{instance.jira_username}:{instance.get_api_token()}"
+    # Prepare authentication with username/password
+    auth_string = f"{instance.jira_username}:{instance.get_jira_password()}"
     encoded_auth = base64.b64encode(auth_string.encode()).decode()
 
     headers = {

@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, BooleanField, SubmitField
+from wtforms import StringField, BooleanField, SubmitField, PasswordField
 from wtforms.validators import DataRequired, Length, URL
 
 class JiraInstanceForm(FlaskForm):
@@ -7,9 +7,9 @@ class JiraInstanceForm(FlaskForm):
                        validators=[DataRequired(), Length(min=2, max=100)])
     base_url = StringField('Jira URL',
                           validators=[DataRequired(), URL(message='Please enter a valid URL')])
-    jira_username = StringField('Your Jira Email',
+    jira_username = StringField('Your Jira Username/Email',
                                validators=[DataRequired()])
-    api_token = StringField('Jira API Token', 
-                           validators=[DataRequired(), Length(min=10, message='API token must be at least 10 characters')])
+    jira_password = PasswordField('Your Jira Password',
+                                 validators=[DataRequired(), Length(min=1, message='Password is required')])
     is_active = BooleanField('Active', default=True)
     submit = SubmitField('Save Jira Instance')

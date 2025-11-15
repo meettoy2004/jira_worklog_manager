@@ -15,10 +15,10 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 def make_jira_api_call(instance, endpoint, method='GET', data=None):
-    """Make direct API calls to Jira REST API v3 with SSL handling"""
+    """Make direct API calls to Jira REST API v3 with username/password authentication"""
     try:
-        # Prepare authentication
-        auth_string = f"{instance.jira_username}:{instance.get_api_token()}"
+        # Prepare authentication with username/password
+        auth_string = f"{instance.jira_username}:{instance.get_jira_password()}"
         encoded_auth = base64.b64encode(auth_string.encode()).decode()
 
         headers = {

@@ -7,5 +7,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///jira_worklog.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # For production, set CRYPTO_KEY as environment variable
-    CRYPTO_KEY = os.environ.get('CRYPTO_KEY') or Fernet.generate_key()
+    # CRITICAL: Use a fixed key for encryption so passwords persist across restarts
+    # In production, set this as an environment variable
+    # For development, use a fixed key (generated once)
+    CRYPTO_KEY = os.environ.get('CRYPTO_KEY') or b'8vHJKLMN9pQRSTUV2wXYZ3aBcDeFgHiJ4kLmNoPqRsT='

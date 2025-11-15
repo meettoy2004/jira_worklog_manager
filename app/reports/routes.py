@@ -61,7 +61,7 @@ def get_worklogs_for_period(instance, start_date, end_date):
 
         logger.info(f"Searching worklogs with JQL: {jql}")
 
-        # Use the search/jql endpoint with POST
+        # Use the search/jql endpoint with POST (API v3)
         search_data = {
             'jql': jql,
             'maxResults': 100,
@@ -117,6 +117,19 @@ def get_worklogs_for_period(instance, start_date, end_date):
                                 time_spent_str += " "
                             time_spent_str += f"{minutes}m"
 
+                        # Extract comment text from ADF format
+                        comment_text = "No description"
+                        comment_content = worklog.get('comment', {})
+                        if comment_content and 'content' in comment_content:
+                            text_parts = []
+                            for content in comment_content['content']:
+                                if content.get('type') == 'paragraph' and 'content' in content:
+                                    for text_item in content['content']:
+                                        if text_item.get('type') == 'text' and 'text' in text_item:
+                                            text_parts.append(text_item['text'])
+                            if text_parts:
+                                comment_text = ' '.join(text_parts)
+
                         worklog_info = {
                             'instance': instance.alias,
                             'issue_key': issue_key,
@@ -124,9 +137,7 @@ def get_worklogs_for_period(instance, start_date, end_date):
                             'project': project_key,
                             'time_spent': time_spent_str,
                             'time_spent_seconds': time_spent_seconds,
-                            'comment': worklog.get('comment', {}).get('content', [{}])[0].get('text',
-                                                                                              'No description') if worklog.get(
-                                'comment') else 'No description',
+                            'comment': comment_text,
                             'date': worklog_date_str,
                             'started': worklog['started'],
                             'author': worklog_author_email
@@ -193,6 +204,19 @@ def get_recent_worklogs_alternative(instance, days=7):
                             time_spent_str += " "
                         time_spent_str += f"{minutes}m"
 
+                    # Extract comment text from ADF format
+                    comment_text = "No description"
+                    comment_content = worklog.get('comment', {})
+                    if comment_content and 'content' in comment_content:
+                        text_parts = []
+                        for content in comment_content['content']:
+                            if content.get('type') == 'paragraph' and 'content' in content:
+                                for text_item in content['content']:
+                                    if text_item.get('type') == 'text' and 'text' in text_item:
+                                        text_parts.append(text_item['text'])
+                        if text_parts:
+                            comment_text = ' '.join(text_parts)
+
                     worklog_info = {
                         'instance': instance.alias,
                         'issue_key': issue_key,
@@ -200,9 +224,7 @@ def get_recent_worklogs_alternative(instance, days=7):
                         'project': issue_data['fields']['project']['key'],
                         'time_spent': time_spent_str,
                         'time_spent_seconds': time_spent_seconds,
-                        'comment': worklog.get('comment', {}).get('content', [{}])[0].get('text',
-                                                                                          'No description') if worklog.get(
-                            'comment') else 'No description',
+                        'comment': comment_text,
                         'date': worklog['started'][:10],
                         'started': worklog['started']
                     }
@@ -369,7 +391,7 @@ def debug_worklogs():
             debug_info += "<p>❌ Could not connect to Jira</p>"
             return debug_info
 
-        # Search for recent issues with worklogs
+        # Search for recent issues with worklogs using API v3
         search_data = {
             'jql': 'worklogAuthor = currentUser() AND worklogDate >= "-7d"',
             'maxResults': 20,
@@ -402,15 +424,16 @@ def debug_worklogs():
                 matches_user = author_email.lower() == instance.jira_username.lower()
                 match_status = "✅" if matches_user else "❌"
 
-                # Try to extract comment text from Atlassian Document Format
+                # Extract comment text from Atlassian Document Format (ADF)
                 comment_content = worklog.get('comment', {})
                 comment_text = "No comment"
                 if comment_content and 'content' in comment_content:
-                    # Extract text from ADF content
                     text_parts = []
                     for content in comment_content['content']:
-                        if content.get('text'):
-                            text_parts.append(content['text'])
+                        if content.get('type') == 'paragraph' and 'content' in content:
+                            for text_item in content['content']:
+                                if text_item.get('type') == 'text' and 'text' in text_item:
+                                    text_parts.append(text_item['text'])
                     if text_parts:
                         comment_text = ' '.join(text_parts)
 

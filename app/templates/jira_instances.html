@@ -37,8 +37,13 @@
                                class="btn btn-edit">Edit</a>
                             <a href="{{ url_for('jira.test_connection', instance_id=instance.id) }}"
                                class="btn btn-info" target="_blank">Test</a>
+                            <a href="{{ url_for('jira.import_worklogs', instance_id=instance.id) }}"
+                               class="btn btn-success"
+                               onclick="return confirm('Import worklogs from the last 30 days for {{ instance.alias }}? This may take a few moments.')">
+                                📥 Import Worklogs
+                            </a>
                             <a href="{{ url_for('reports.debug_worklogs', instance_id=instance.id) }}"
-   class="btn btn-warning btn-sm" target="_blank">Debug</a>
+                               class="btn btn-warning btn-sm" target="_blank">Debug</a>
                             <a href="{{ url_for('jira.delete_jira_instance', instance_id=instance.id) }}"
                                class="btn btn-delete"
                                onclick="return confirm('Are you sure you want to delete {{ instance.alias }}? This action cannot be undone.')">
@@ -60,22 +65,48 @@
     {% endif %}
 
     <div class="help-section">
-        <h4>📖 How to get your Jira API Token</h4>
+        <h4>📖 How to get your Jira credentials</h4>
         <ol>
-            <li>Log into your Jira instance</li>
-            <li>Click on your profile picture → <strong>Account settings</strong></li>
-            <li>Go to <strong>Security</strong> → <strong>API tokens</strong></li>
-            <li>Click <strong>Create and manage API tokens</strong></li>
-            <li>Create a new token and copy it</li>
+            <li>Use your regular Jira username (email) and password</li>
+            <li>After adding an instance, click <strong>"📥 Import Worklogs"</strong> to pull your last 30 days of work</li>
+            <li>Use <strong>Test</strong> to verify connectivity</li>
+            <li>Use <strong>Debug</strong> to troubleshoot worklog retrieval issues</li>
         </ol>
 
         <h4>🔧 Connection Troubleshooting</h4>
         <ul>
             <li>Use the <strong>Test</strong> button to check your connection</li>
-            <li>Ensure your URL format is correct (e.g., https://your-domain.atlassian.net)</li>
-            <li>Verify your API token has the correct permissions</li>
+            <li>Ensure your URL format is correct (e.g., https://your-domain.atlassian.net or https://jira.yourcompany.com)</li>
+            <li>Verify your username and password are correct</li>
             <li>Check that your Jira instance is accessible from your network</li>
+            <li>After successful connection, click <strong>Import Worklogs</strong> to see your historical data</li>
         </ul>
     </div>
 </div>
+
+<style>
+.btn-success {
+    background: #28a745;
+    color: white;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.9rem;
+    display: inline-block;
+    transition: all 0.3s ease;
+}
+
+.btn-success:hover {
+    background: #218838;
+    transform: translateY(-1px);
+}
+
+.actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+</style>
 {% endblock %}

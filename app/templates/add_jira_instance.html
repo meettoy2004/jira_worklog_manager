@@ -51,12 +51,12 @@
             </div>
 
             <div class="form-group">
-                {{ form.api_token.label }}
-                {{ form.api_token(class="form-control", placeholder="Enter your Jira API token") }}
-                <small>Get this from your Jira profile → Account settings → Security → API tokens</small>
-                {% if form.api_token.errors %}
+                {{ form.jira_password.label }}
+                {{ form.jira_password(class="form-control", placeholder="Enter your Jira password") }}
+                <small>Your Jira login password (will be stored encrypted)</small>
+                {% if form.jira_password.errors %}
                     <div class="errors">
-                        {% for error in form.api_token.errors %}
+                        {% for error in form.jira_password.errors %}
                             <span class="error">{{ error }}</span>
                         {% endfor %}
                     </div>

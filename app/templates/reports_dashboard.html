@@ -62,6 +62,29 @@
         </div>
     </div>
 
+    <!-- Charts Section -->
+    <div class="report-section">
+        <h3>📈 Visual Reports</h3>
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h4>Daily Time Distribution</h4>
+                <canvas id="dailyChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h4>Time by Project</h4>
+                <canvas id="projectChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h4>Time by Instance</h4>
+                <canvas id="instanceChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h4>Weekly Overview</h4>
+                <canvas id="weeklyChart"></canvas>
+            </div>
+        </div>
+    </div>
+
     <!-- Instance Breakdown -->
     <div class="report-section">
         <h3>🔄 Time by Jira Instance</h3>
@@ -163,18 +186,228 @@
         </div>
         {% endif %}
     </div>
-
-    <!-- Charts Section -->
-    <div class="report-section">
-        <h3>📈 Visual Reports</h3>
-        <div class="charts-container">
-            <div class="chart-placeholder">
-                <p>📊 Charts and graphs will be displayed here</p>
-                <p><small>Visualizations showing time distribution across instances, projects, and days</small></p>
-            </div>
-        </div>
-    </div>
 </div>
+
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+// Prepare data from backend
+const dailyData = {{ daily_totals|tojson }};
+const projectData = {{ project_totals|tojson }};
+const instanceData = {{ instance_totals|tojson }};
+
+// Helper function to convert time strings to hours
+function timeToHours(timeStr) {
+    if (!timeStr) return 0;
+    let hours = 0;
+    const hourMatch = timeStr.match(/(\d+)h/);
+    const minMatch = timeStr.match(/(\d+)m/);
+    if (hourMatch) hours += parseInt(hourMatch[1]);
+    if (minMatch) hours += parseInt(minMatch[1]) / 60;
+    return parseFloat(hours.toFixed(2));
+}
+
+// Color palette
+const colors = [
+    'rgba(102, 126, 234, 0.8)',
+    'rgba(118, 75, 162, 0.8)',
+    'rgba(237, 100, 166, 0.8)',
+    'rgba(255, 154, 68, 0.8)',
+    'rgba(46, 213, 115, 0.8)',
+    'rgba(0, 210, 211, 0.8)',
+    'rgba(255, 121, 121, 0.8)',
+    'rgba(254, 202, 87, 0.8)',
+];
+
+// 1. Daily Time Distribution Chart
+const dailyDates = Object.keys(dailyData).sort();
+const dailyValues = dailyDates.map(date => timeToHours(dailyData[date]));
+
+new Chart(document.getElementById('dailyChart'), {
+    type: 'bar',
+    data: {
+        labels: dailyDates,
+        datasets: [{
+            label: 'Hours Logged',
+            data: dailyValues,
+            backgroundColor: 'rgba(102, 126, 234, 0.8)',
+            borderColor: 'rgba(102, 126, 234, 1)',
+            borderWidth: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.parsed.y.toFixed(2) + ' hours';
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Hours'
+                }
+            }
+        }
+    }
+});
+
+// 2. Time by Project Chart (Pie)
+const projectNames = Object.keys(projectData);
+const projectHours = projectNames.map(proj => timeToHours(projectData[proj].time));
+
+new Chart(document.getElementById('projectChart'), {
+    type: 'doughnut',
+    data: {
+        labels: projectNames,
+        datasets: [{
+            data: projectHours,
+            backgroundColor: colors.slice(0, projectNames.length),
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: {
+                position: 'right'
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const label = context.label || '';
+                        const value = context.parsed.toFixed(2);
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = ((context.parsed / total) * 100).toFixed(1);
+                        return label + ': ' + value + 'h (' + percentage + '%)';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// 3. Time by Instance Chart (Horizontal Bar)
+const instanceNames = Object.keys(instanceData);
+const instanceHours = instanceNames.map(inst => {
+    const data = instanceData[inst];
+    return data.hours + (data.minutes / 60);
+});
+
+new Chart(document.getElementById('instanceChart'), {
+    type: 'bar',
+    data: {
+        labels: instanceNames,
+        datasets: [{
+            label: 'Hours Logged',
+            data: instanceHours,
+            backgroundColor: colors.slice(0, instanceNames.length),
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.parsed.x.toFixed(2) + ' hours';
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Hours'
+                }
+            }
+        }
+    }
+});
+
+// 4. Weekly Overview Chart (Line)
+// Group daily data by week
+const weeklyData = {};
+dailyDates.forEach((date, idx) => {
+    const d = new Date(date);
+    const weekStart = new Date(d);
+    weekStart.setDate(d.getDate() - d.getDay()); // Start of week (Sunday)
+    const weekKey = weekStart.toISOString().split('T')[0];
+
+    if (!weeklyData[weekKey]) {
+        weeklyData[weekKey] = 0;
+    }
+    weeklyData[weekKey] += dailyValues[idx];
+});
+
+const weekLabels = Object.keys(weeklyData).sort();
+const weekValues = weekLabels.map(week => weeklyData[week]);
+
+new Chart(document.getElementById('weeklyChart'), {
+    type: 'line',
+    data: {
+        labels: weekLabels.map(w => 'Week of ' + w),
+        datasets: [{
+            label: 'Hours per Week',
+            data: weekValues,
+            borderColor: 'rgba(118, 75, 162, 1)',
+            backgroundColor: 'rgba(118, 75, 162, 0.2)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 5,
+            pointHoverRadius: 7
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.parsed.y.toFixed(2) + ' hours';
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Hours'
+                }
+            }
+        }
+    }
+});
+</script>
 
 <style>
 .summary-cards {
@@ -206,7 +439,7 @@
 .summary-card.total-time .summary-value { color: #28a745; }
 .summary-card.instances .summary-value { color: #007bff; }
 .summary-card.projects .summary-value { color: #ffc107; }
-.summary-card.days .summary-value { color: #6c757d; }
+.summary-card.days .summary-value { color: #6c757d; font-size: 1.2rem; }
 
 .summary-label {
     color: #6c757d;
@@ -226,6 +459,31 @@
     color: #333;
     border-bottom: 2px solid #f8f9fa;
     padding-bottom: 0.5rem;
+}
+
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+    margin-top: 1.5rem;
+}
+
+.chart-container {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.chart-container h4 {
+    margin: 0 0 1rem 0;
+    color: #495057;
+    font-size: 1rem;
+    text-align: center;
+}
+
+.chart-container canvas {
+    max-height: 300px;
 }
 
 .instance-breakdown, .project-breakdown, .daily-breakdown {
@@ -336,12 +594,15 @@
     flex-wrap: wrap;
 }
 
-.chart-placeholder {
-    text-align: center;
-    padding: 3rem;
-    background: #f8f9fa;
-    border-radius: 8px;
-    border: 2px dashed #dee2e6;
+.btn-outline-primary {
+    background: white;
+    color: #007bff;
+    border: 1px solid #007bff;
+}
+
+.btn-outline-primary:hover {
+    background: #007bff;
+    color: white;
 }
 
 .date-range-selector {
@@ -365,6 +626,16 @@
 
 .mt-3 {
     margin-top: 1rem;
+}
+
+@media (max-width: 768px) {
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .summary-cards {
+        grid-template-columns: 1fr;
+    }
 }
 </style>
 {% endblock %}

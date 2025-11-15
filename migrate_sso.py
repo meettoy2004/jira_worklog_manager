@@ -12,6 +12,7 @@ from app import create_app, db
 from app.models import User, AuthProvider
 from sqlalchemy import text
 
+
 def migrate_database():
     """Migrate the database to add SSO features"""
     app = create_app()
@@ -19,7 +20,6 @@ def migrate_database():
     with app.app_context():
         print("Starting SSO database migration...")
 
-        # Get the database connection
         conn = db.engine.connect()
 
         try:
@@ -29,28 +29,38 @@ def migrate_database():
 
             print("\n=== Updating User table ===")
 
-            # Add new columns to User table if they don't exist
+            # Define columns to add
             new_columns = {
                 'email': "ALTER TABLE user ADD COLUMN email VARCHAR(120)",
                 'full_name': "ALTER TABLE user ADD COLUMN full_name VARCHAR(200)",
                 'auth_provider_id': "ALTER TABLE user ADD COLUMN auth_provider_id INTEGER",
                 'external_id': "ALTER TABLE user ADD COLUMN external_id VARCHAR(256)",
                 'last_login': "ALTER TABLE user ADD COLUMN last_login DATETIME",
-                'created_at': "ALTER TABLE user ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP",
+                # SQLite-safe: cannot set DEFAULT CURRENT_TIMESTAMP in ALTER TABLE
+                'created_at': "ALTER TABLE user ADD COLUMN created_at DATETIME"
             }
 
             for column_name, alter_sql in new_columns.items():
                 if column_name not in existing_columns:
                     print(f"Adding {column_name} column to User table...")
-                    conn.execute(text(alter_sql))
-                    conn.commit()
-                    print(f"✓ {column_name} column added")
+                    try:
+                        conn.execute(text(alter_sql))
+                        print(f"✓ {column_name} column added")
+
+                        # Handle special case for created_at
+                        if column_name == "created_at":
+                            conn.execute(
+                                text("UPDATE user SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL")
+                            )
+                            print("✓ created_at column populated with CURRENT_TIMESTAMP for existing users")
+
+                    except Exception as ce:
+                        print(f"⚠ Skipped {column_name} due to error: {ce}")
                 else:
                     print(f"✓ {column_name} column already exists")
 
-            # Make password_hash nullable for SSO users
             print("\nNote: password_hash column should be nullable for SSO users.")
-            print("SQLite doesn't support modifying columns easily, so existing column constraints remain.")
+            print("SQLite doesn’t support modifying column constraints easily, so this remains unchanged.")
 
             # Check if AuthProvider table exists
             print("\n=== Creating AuthProvider table ===")
@@ -60,13 +70,12 @@ def migrate_database():
 
             if result.fetchone() is None:
                 print("Creating AuthProvider table...")
-                # Create all tables (will only create missing ones)
                 db.create_all()
                 print("✓ AuthProvider table created")
             else:
                 print("✓ AuthProvider table already exists")
 
-            print("\n✓ Database migration completed successfully!")
+            print("\n✅ Database migration completed successfully!")
             print("\nNext steps:")
             print("1. Install new dependencies:")
             print("   pip install -r requirements.txt")
@@ -82,7 +91,6 @@ def migrate_database():
 
         except Exception as e:
             print(f"\n✗ Error during migration: {str(e)}")
-            conn.rollback()
             raise
         finally:
             conn.close()

@@ -7,6 +7,27 @@
         <p>Manage your Jira instances and log work across multiple projects.</p>
     </div>
 
+    {% if pending_invites %}
+    <div class="team-invites-section">
+        <h3>Pending Team Invites</h3>
+        <div class="invites-list">
+            {% for invite in pending_invites %}
+            <div class="invite-card">
+                <div class="invite-info">
+                    <h4>Team Invitation</h4>
+                    <p><strong>{{ invite.manager.username }}</strong> has invited you to join their team.</p>
+                    <p class="invite-date">Invited on: {{ invite.invited_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                </div>
+                <div class="invite-actions">
+                    <a href="{{ url_for('accept_invite', invite_id=invite.id) }}" class="btn btn-success">Accept</a>
+                    <a href="{{ url_for('reject_invite', invite_id=invite.id) }}" class="btn btn-danger">Reject</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     <div class="dashboard-stats">
         <div class="stat-card">
             <h3>Jira Instances</h3>
@@ -14,13 +35,19 @@
             <p>Configured instances</p>
             <a href="{{ url_for('jira.jira_instances') }}" class="btn btn-primary">Manage Instances</a>
         </div>
-        
+
         <div class="stat-card">
             <h3>Quick Actions</h3>
             <div class="quick-actions">
                 <a href="{{ url_for('worklog.log_work') }}" class="btn btn-primary">Log Work</a>
                 <a href="{{ url_for('reports.reports_dashboard') }}" class="btn btn-primary">View Reports</a>
                 <a href="{{ url_for('jira.add_jira_instance') }}" class="btn btn-secondary">Add Jira Instance</a>
+                {% if current_user.is_manager %}
+                <a href="{{ url_for('manager.dashboard') }}" class="btn btn-primary">Manager Dashboard</a>
+                {% endif %}
+                {% if current_user.is_admin %}
+                <a href="{{ url_for('admin.dashboard') }}" class="btn btn-primary">Admin Dashboard</a>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -123,6 +150,55 @@
 </div>
 
 <style>
+.team-invites-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    border-left: 4px solid #ffc107;
+}
+
+.invites-list {
+    margin-top: 1rem;
+}
+
+.invite-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    background: #fff3cd;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    border: 1px solid #ffc107;
+}
+
+.invite-info h4 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.invite-info p {
+    margin: 0.25rem 0;
+    color: #6c757d;
+}
+
+.invite-date {
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+.invite-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
 .dashboard-header {
     text-align: center;
     margin-bottom: 2rem;

@@ -35,6 +35,12 @@ def create_app():
     from app.reports.routes import reports_bp
     app.register_blueprint(reports_bp, url_prefix='/reports')
 
+    from app.admin import admin
+    app.register_blueprint(admin)
+
+    from app.manager import manager
+    app.register_blueprint(manager)
+
     # Add basic routes
     @app.route('/')
     def index():
@@ -43,8 +49,59 @@ def create_app():
     @app.route('/dashboard')
     @login_required
     def dashboard():
-        from app.models import JiraInstance
+        from app.models import JiraInstance, TeamInvite
         instances = JiraInstance.query.filter_by(user_id=current_user.id).all()
-        return render_template('dashboard.html', instances=instances)
+        pending_invites = current_user.get_pending_invites()
+        return render_template('dashboard.html', instances=instances, pending_invites=pending_invites)
+
+    @app.route('/accept-invite/<int:invite_id>')
+    @login_required
+    def accept_invite(invite_id):
+        from app.models import TeamInvite
+        from flask import flash
+        from datetime import datetime
+
+        invite = TeamInvite.query.get_or_404(invite_id)
+
+        # Verify this invite is for the current user
+        if invite.member_id != current_user.id:
+            flash('You do not have permission to accept this invite.', 'danger')
+            return redirect(url_for('dashboard'))
+
+        if invite.status != 'pending':
+            flash('This invite has already been processed.', 'info')
+            return redirect(url_for('dashboard'))
+
+        invite.status = 'accepted'
+        invite.responded_at = datetime.utcnow()
+        db.session.commit()
+
+        flash(f'You have accepted the team invite from {invite.manager.username}.', 'success')
+        return redirect(url_for('dashboard'))
+
+    @app.route('/reject-invite/<int:invite_id>')
+    @login_required
+    def reject_invite(invite_id):
+        from app.models import TeamInvite
+        from flask import flash
+        from datetime import datetime
+
+        invite = TeamInvite.query.get_or_404(invite_id)
+
+        # Verify this invite is for the current user
+        if invite.member_id != current_user.id:
+            flash('You do not have permission to reject this invite.', 'danger')
+            return redirect(url_for('dashboard'))
+
+        if invite.status != 'pending':
+            flash('This invite has already been processed.', 'info')
+            return redirect(url_for('dashboard'))
+
+        invite.status = 'rejected'
+        invite.responded_at = datetime.utcnow()
+        db.session.commit()
+
+        flash(f'You have rejected the team invite from {invite.manager.username}.', 'info')
+        return redirect(url_for('dashboard'))
 
     return app

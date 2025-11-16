@@ -2,14 +2,23 @@
 
 {% block content %}
 <div class="dashboard">
+    <!-- Hero Header -->
     <div class="dashboard-header">
-        <h2>Welcome to Your Dashboard, {{ current_user.username }}!</h2>
-        <p>Manage your Jira instances and log work across multiple projects.</p>
+        <div class="header-content">
+            <h1 class="animate-fade-in">Welcome to Your Dashboard, {{ current_user.username }}! 👋</h1>
+            <p class="animate-fade-in-delay">Manage your Jira instances and track your work across multiple projects</p>
+        </div>
+        <div class="header-decoration">
+            <div class="floating-icon">📊</div>
+            <div class="floating-icon delay-1">⏱️</div>
+            <div class="floating-icon delay-2">📈</div>
+        </div>
     </div>
 
+    <!-- Pending Team Invites -->
     {% if pending_invites %}
-    <div class="team-invites-section">
-        <h3>Pending Team Invites</h3>
+    <div class="team-invites-section animate-slide-in">
+        <h3>🔔 Pending Team Invites</h3>
         <div class="invites-list">
             {% for invite in pending_invites %}
             <div class="invite-card">
@@ -19,8 +28,8 @@
                     <p class="invite-date">Invited on: {{ invite.invited_at.strftime('%Y-%m-%d %H:%M') }}</p>
                 </div>
                 <div class="invite-actions">
-                    <a href="{{ url_for('accept_invite', invite_id=invite.id) }}" class="btn btn-success">Accept</a>
-                    <a href="{{ url_for('reject_invite', invite_id=invite.id) }}" class="btn btn-danger">Reject</a>
+                    <a href="{{ url_for('accept_invite', invite_id=invite.id) }}" class="btn btn-success">✓ Accept</a>
+                    <a href="{{ url_for('reject_invite', invite_id=invite.id) }}" class="btn btn-danger">✗ Reject</a>
                 </div>
             </div>
             {% endfor %}
@@ -28,139 +37,315 @@
     </div>
     {% endif %}
 
-    <div class="dashboard-stats">
-        <div class="stat-card">
-            <h3>Jira Instances</h3>
-            <div class="stat-number">{{ instances|length }}</div>
-            <p>Configured instances</p>
-            <a href="{{ url_for('jira.jira_instances') }}" class="btn btn-primary">Manage Instances</a>
-        </div>
-
-        <div class="stat-card">
-            <h3>Quick Actions</h3>
-            <div class="quick-actions">
-                <a href="{{ url_for('worklog.log_work') }}" class="btn btn-primary">Log Work</a>
-                <a href="{{ url_for('reports.reports_dashboard') }}" class="btn btn-primary">View Reports</a>
-                <a href="{{ url_for('jira.add_jira_instance') }}" class="btn btn-secondary">Add Jira Instance</a>
-                {% if current_user.is_manager %}
-                <a href="{{ url_for('manager.dashboard') }}" class="btn btn-primary">Manager Dashboard</a>
-                {% endif %}
-                {% if current_user.is_admin %}
-                <a href="{{ url_for('admin.dashboard') }}" class="btn btn-primary">Admin Dashboard</a>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <div class="jira-instances-overview">
-        <h3>Your Jira Instances</h3>
-        {% if instances %}
-            <div class="instances-grid">
-                {% for instance in instances %}
-                <div class="instance-card {{ 'instance-active' if instance.is_active else 'instance-inactive' }}">
-                    <div class="instance-header">
-                        <h4>{{ instance.alias }}</h4>
-                        <span class="instance-status {{ 'status-active' if instance.is_active else 'status-inactive' }}">
-                            {{ 'Active' if instance.is_active else 'Inactive' }}
-                        </span>
-                    </div>
-                    <div class="instance-details">
-                        <p><strong>URL:</strong> {{ instance.base_url }}</p>
-                        <p><strong>Username:</strong> {{ instance.jira_username }}</p>
-                    </div>
-                    <div class="instance-actions">
-                        <a href="{{ url_for('jira.edit_jira_instance', instance_id=instance.id) }}" class="btn btn-edit">Edit</a>
-                        <a href="{{ url_for('jira.test_connection', instance_id=instance.id) }}" class="btn btn-info" target="_blank">Test</a>
-                        {% if instance.is_active %}
-                            <span class="btn btn-success">Connected</span>
-                        {% else %}
-                            <span class="btn btn-warning">Disabled</span>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        {% else %}
-            <div class="no-instances">
-                <p>You haven't configured any Jira instances yet.</p>
-                <a href="{{ url_for('jira.add_jira_instance') }}" class="btn btn-primary">Add Your First Jira Instance</a>
-            </div>
-        {% endif %}
-    </div>
-
-    <div class="coming-soon">
-        <h3>Application Features</h3>
-        <div class="features-grid">
-            <div class="feature-card">
-                <h4>📊 Unified Worklog</h4>
-                <p>Log time across all your Jira instances from one interface</p>
-            </div>
-            <div class="feature-card">
-                <h4>⏱️ Time Tracking</h4>
-                <p>Track time spent with automatic calculations</p>
-            </div>
-            <div class="feature-card">
-                <h4>📈 Reports</h4>
-                <p>View cumulative time across all projects and instances</p>
-            </div>
-            <div class="feature-card">
-                <h4>🔍 Quick Search</h4>
-                <p>Find issues across all configured Jira instances</p>
-            </div>
-            <div class="feature-card">
-                <h4>🔄 Multi-Instance</h4>
-                <p>Manage multiple Jira instances simultaneously</p>
-            </div>
-            <div class="feature-card">
-                <h4>🔒 Secure</h4>
-                <p>Encrypted API token storage and secure connections</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="recent-activity">
-        <h3>Getting Started</h3>
+    <!-- Getting Started Section -->
+    <div class="getting-started-section animate-slide-in">
+        <h3>🚀 Getting Started</h3>
         <div class="getting-started-steps">
-            <div class="step">
+            <div class="step-card">
                 <div class="step-number">1</div>
                 <div class="step-content">
                     <h4>Configure Jira Instances</h4>
                     <p>Add your Jira instances with API credentials</p>
-                    <a href="{{ url_for('jira.add_jira_instance') }}" class="btn btn-sm btn-primary">Add Instance</a>
+                    <a href="{{ url_for('jira.add_jira_instance') }}" class="btn btn-primary btn-sm">Add Instance</a>
                 </div>
             </div>
-            <div class="step">
+            <div class="step-card">
                 <div class="step-number">2</div>
                 <div class="step-content">
                     <h4>Log Your Work</h4>
                     <p>Start logging time across all your projects</p>
-                    <a href="{{ url_for('worklog.log_work') }}" class="btn btn-sm btn-primary">Log Work</a>
+                    <a href="{{ url_for('worklog.log_work') }}" class="btn btn-primary btn-sm">Log Work</a>
                 </div>
             </div>
-            <div class="step">
+            <div class="step-card">
                 <div class="step-number">3</div>
                 <div class="step-content">
                     <h4>View Reports</h4>
                     <p>Analyze your time across all instances</p>
-                    <a href="{{ url_for('reports.reports_dashboard') }}" class="btn btn-sm btn-primary">View Reports</a>
+                    <a href="{{ url_for('reports.reports_dashboard') }}" class="btn btn-primary btn-sm">View Reports</a>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Jira Instances and Quick Actions Grid -->
+    <div class="main-grid">
+        <!-- Jira Instances -->
+        <div class="jira-instances-card animate-slide-in">
+            <div class="card-header">
+                <h3>🔗 Jira Instances</h3>
+                <span class="badge">{{ instances|length }}</span>
+            </div>
+            {% if instances %}
+                <div class="instances-list">
+                    {% for instance in instances %}
+                    <div class="instance-item {{ 'instance-active' if instance.is_active else 'instance-inactive' }}">
+                        <div class="instance-info">
+                            <h4>{{ instance.alias }}</h4>
+                            <p class="instance-url">{{ instance.base_url }}</p>
+                            <p class="instance-user">{{ instance.jira_username }}</p>
+                        </div>
+                        <div class="instance-status">
+                            {% if instance.is_active %}
+                                <span class="status-badge status-active">✓ Active</span>
+                            {% else %}
+                                <span class="status-badge status-inactive">○ Inactive</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="card-footer">
+                    <a href="{{ url_for('jira.jira_instances') }}" class="btn btn-secondary btn-block">Manage All Instances</a>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">🔌</div>
+                    <p>No Jira instances configured yet</p>
+                    <a href="{{ url_for('jira.add_jira_instance') }}" class="btn btn-primary">Add Your First Instance</a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions-card animate-slide-in">
+            <div class="card-header">
+                <h3>⚡ Quick Actions</h3>
+            </div>
+            <div class="quick-actions-grid">
+                <a href="{{ url_for('worklog.log_work') }}" class="action-btn action-primary">
+                    <div class="action-icon">📝</div>
+                    <div class="action-label">Log Work</div>
+                </a>
+                <a href="{{ url_for('reports.reports_dashboard') }}" class="action-btn action-info">
+                    <div class="action-icon">📊</div>
+                    <div class="action-label">View Reports</div>
+                </a>
+                <a href="{{ url_for('jira.add_jira_instance') }}" class="action-btn action-success">
+                    <div class="action-icon">➕</div>
+                    <div class="action-label">Add Instance</div>
+                </a>
+                {% if current_user.is_manager %}
+                <a href="{{ url_for('manager.dashboard') }}" class="action-btn action-warning">
+                    <div class="action-icon">👥</div>
+                    <div class="action-label">Manager Dashboard</div>
+                </a>
+                {% endif %}
+                {% if current_user.is_admin %}
+                <a href="{{ url_for('admin.dashboard') }}" class="action-btn action-danger">
+                    <div class="action-icon">⚙️</div>
+                    <div class="action-label">Admin Dashboard</div>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Weekly Overview Section -->
+    <div class="weekly-overview-section animate-slide-in">
+        <div class="section-header">
+            <h3>📈 Weekly Overview</h3>
+            <p class="date-range">{{ start_date.strftime('%B %d, %Y') }} - {{ end_date.strftime('%B %d, %Y') }}</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-box stat-primary">
+                <div class="stat-icon">⏱️</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ weekly_stats.total_time_formatted }}</div>
+                    <div class="stat-label">Total Time Logged</div>
+                </div>
+            </div>
+            <div class="stat-box stat-success">
+                <div class="stat-icon">📝</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ weekly_stats.total_worklogs }}</div>
+                    <div class="stat-label">Worklog Entries</div>
+                </div>
+            </div>
+            <div class="stat-box stat-info">
+                <div class="stat-icon">📅</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ weekly_stats.days_logged }}</div>
+                    <div class="stat-label">Days Logged</div>
+                </div>
+            </div>
+            <div class="stat-box stat-warning">
+                <div class="stat-icon">📊</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ weekly_stats.avg_per_day }}</div>
+                    <div class="stat-label">Average per Day</div>
+                </div>
+            </div>
+        </div>
+
+        {% if weekly_stats.project_breakdown %}
+        <div class="project-breakdown">
+            <h4>Project Breakdown</h4>
+            <div class="project-list">
+                {% for project, seconds in weekly_stats.project_breakdown.items() %}
+                {% set hours = (seconds // 3600)|int %}
+                {% set minutes = ((seconds % 3600) // 60)|int %}
+                {% set percentage = ((seconds / weekly_stats.total_time_seconds) * 100)|round(1) if weekly_stats.total_time_seconds > 0 else 0 %}
+                <div class="project-item">
+                    <div class="project-info">
+                        <span class="project-name">{{ project }}</span>
+                        <span class="project-time">{{ hours }}h {{ minutes }}m ({{ percentage }}%)</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {{ percentage }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="no-worklogs">
+            <p>No worklogs found for the last 30 days. Start logging your work!</p>
+            <a href="{{ url_for('worklog.log_work') }}" class="btn btn-primary">Log Work Now</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Application Features -->
+    <div class="features-section animate-slide-in">
+        <h3>✨ Application Features</h3>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h4>Unified Worklog</h4>
+                <p>Log time across all your Jira instances from one interface</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⏱️</div>
+                <h4>Time Tracking</h4>
+                <p>Track time spent with automatic calculations</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📈</div>
+                <h4>Reports</h4>
+                <p>View cumulative time across all projects and instances</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔍</div>
+                <h4>Quick Search</h4>
+                <p>Find issues across all configured Jira instances</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔄</div>
+                <h4>Multi-Instance</h4>
+                <p>Manage multiple Jira instances simultaneously</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <h4>Secure</h4>
+                <p>Encrypted API token storage and secure connections</p>
             </div>
         </div>
     </div>
 </div>
 
 <style>
+/* Variables */
+:root {
+    --primary-color: #6366f1;
+    --primary-dark: #4f46e5;
+    --success-color: #10b981;
+    --warning-color: #f59e0b;
+    --danger-color: #ef4444;
+    --info-color: #06b6d4;
+    --text-dark: #111827;
+    --text-light: #6b7280;
+    --bg-light: #f9fafb;
+    --border-color: #e5e7eb;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Dashboard Container */
+.dashboard {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* Hero Header */
+.dashboard-header {
+    position: relative;
+    text-align: center;
+    padding: 3rem 2rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    margin-bottom: 2rem;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+}
+
+.header-content h1 {
+    margin: 0 0 0.75rem 0;
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+.header-content p {
+    margin: 0;
+    font-size: 1.2rem;
+    opacity: 0.95;
+}
+
+.header-decoration {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.floating-icon {
+    position: absolute;
+    font-size: 3rem;
+    opacity: 0.15;
+    animation: float 6s ease-in-out infinite;
+}
+
+.floating-icon:nth-child(1) {
+    top: 20%;
+    right: 10%;
+}
+
+.floating-icon:nth-child(2) {
+    top: 60%;
+    right: 25%;
+    animation-delay: 2s;
+}
+
+.floating-icon:nth-child(3) {
+    top: 40%;
+    right: 5%;
+    animation-delay: 4s;
+}
+
+/* Team Invites */
 .team-invites-section {
     background: white;
     padding: 2rem;
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
     margin-bottom: 2rem;
-    border-left: 4px solid #ffc107;
+    border-left: 4px solid var(--warning-color);
+}
+
+.team-invites-section h3 {
+    margin: 0 0 1.5rem 0;
+    color: var(--text-dark);
 }
 
 .invites-list {
-    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
 .invite-card {
@@ -169,19 +354,18 @@
     align-items: center;
     padding: 1.5rem;
     background: #fff3cd;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-    border: 1px solid #ffc107;
+    border-radius: 10px;
+    border: 2px solid var(--warning-color);
 }
 
 .invite-info h4 {
     margin: 0 0 0.5rem 0;
-    color: #333;
+    color: var(--text-dark);
 }
 
 .invite-info p {
     margin: 0.25rem 0;
-    color: #6c757d;
+    color: var(--text-light);
 }
 
 .invite-date {
@@ -191,300 +375,633 @@
 
 .invite-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.75rem;
 }
 
-.btn-danger {
-    background: #dc3545;
-    color: white;
-}
-
-.dashboard-header {
-    text-align: center;
+/* Getting Started Section */
+.getting-started-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
     margin-bottom: 2rem;
-    padding: 2rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 10px;
 }
 
-.dashboard-header h2 {
-    margin-bottom: 0.5rem;
-    font-size: 2rem;
+.getting-started-section h3 {
+    margin: 0 0 1.5rem 0;
+    color: var(--text-dark);
 }
 
-.dashboard-header p {
-    font-size: 1.1rem;
-    opacity: 0.9;
-}
-
-.dashboard-stats {
+.getting-started-steps {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 2rem;
-    margin-bottom: 3rem;
-}
-
-.stat-card {
-    background: white;
-    padding: 2rem;
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    text-align: center;
-}
-
-.stat-number {
-    font-size: 3rem;
-    font-weight: bold;
-    color: #667eea;
-    margin: 1rem 0;
-}
-
-.quick-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.jira-instances-overview {
-    background: white;
-    padding: 2rem;
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    margin-bottom: 3rem;
-}
-
-.instances-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1.5rem;
-    margin-top: 1.5rem;
 }
 
-.instance-card {
-    border: 2px solid #e9ecef;
-    border-radius: 8px;
+.step-card {
+    display: flex;
+    gap: 1rem;
     padding: 1.5rem;
+    background: var(--bg-light);
+    border-radius: 10px;
+    border: 2px solid var(--border-color);
     transition: all 0.3s ease;
 }
 
-.instance-card.instance-active {
-    border-color: #28a745;
+.step-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+    border-color: var(--primary-color);
 }
 
-.instance-card.instance-inactive {
-    border-color: #6c757d;
-    opacity: 0.7;
-}
-
-.instance-header {
+.step-number {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-}
-
-.instance-header h4 {
-    margin: 0;
-    color: #333;
-}
-
-.instance-status {
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.875rem;
+    align-items: center;
+    justify-content: center;
     font-weight: bold;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(99, 102, 241, 0.3);
 }
 
-.status-active {
-    background: #d4edda;
-    color: #155724;
+.step-content h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-dark);
 }
 
-.status-inactive {
-    background: #e2e3e5;
-    color: #383d41;
-}
-
-.instance-details {
-    margin-bottom: 1rem;
-}
-
-.instance-details p {
-    margin: 0.5rem 0;
+.step-content p {
+    margin: 0 0 1rem 0;
+    color: var(--text-light);
     font-size: 0.9rem;
 }
 
-.instance-actions {
+/* Main Grid - Jira Instances and Quick Actions */
+.main-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+/* Jira Instances Card */
+.jira-instances-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.card-header {
     display: flex;
-    gap: 0.5rem;
     justify-content: space-between;
-    flex-wrap: wrap;
+    align-items: center;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
 }
 
-.no-instances {
+.card-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.badge {
+    background: rgba(255, 255, 255, 0.3);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-weight: bold;
+}
+
+.instances-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.instance-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.2s ease;
+}
+
+.instance-item:hover {
+    background: var(--bg-light);
+}
+
+.instance-item:last-child {
+    border-bottom: none;
+}
+
+.instance-info h4 {
+    margin: 0 0 0.25rem 0;
+    color: var(--text-dark);
+    font-size: 1rem;
+}
+
+.instance-url {
+    margin: 0.25rem 0;
+    color: var(--text-light);
+    font-size: 0.85rem;
+}
+
+.instance-user {
+    margin: 0.25rem 0;
+    color: var(--text-light);
+    font-size: 0.85rem;
+}
+
+.status-badge {
+    padding: 0.35rem 0.85rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status-active {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-inactive {
+    background: #e5e7eb;
+    color: #6b7280;
+}
+
+.card-footer {
+    padding: 1rem 1.5rem;
+    background: var(--bg-light);
+    border-top: 1px solid var(--border-color);
+}
+
+.empty-state {
+    padding: 3rem 2rem;
     text-align: center;
-    padding: 3rem;
-    background: #f8f9fa;
-    border-radius: 8px;
-    border: 2px dashed #dee2e6;
 }
 
-.coming-soon {
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state p {
+    color: var(--text-light);
+    margin-bottom: 1.5rem;
+}
+
+/* Quick Actions Card */
+.quick-actions-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.quick-actions-grid {
+    padding: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    border-radius: 10px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.action-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+}
+
+.action-primary {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+}
+
+.action-info {
+    background: linear-gradient(135deg, #06b6d4, #0891b2);
+    color: white;
+}
+
+.action-success {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+.action-warning {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+}
+
+.action-danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+}
+
+.action-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.action-label {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+/* Weekly Overview Section */
+.weekly-overview-section {
     background: white;
     padding: 2rem;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.section-header h3 {
+    margin: 0;
+    color: var(--text-dark);
+}
+
+.date-range {
+    color: var(--text-light);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-box {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
     border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    margin-bottom: 3rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.stat-box:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+}
+
+.stat-primary {
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    border-left: 4px solid #3b82f6;
+}
+
+.stat-success {
+    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+    border-left: 4px solid var(--success-color);
+}
+
+.stat-info {
+    background: linear-gradient(135deg, #cffafe, #a5f3fc);
+    border-left: 4px solid var(--info-color);
+}
+
+.stat-warning {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border-left: 4px solid var(--warning-color);
+}
+
+.stat-icon {
+    font-size: 2.5rem;
+    opacity: 0.8;
+}
+
+.stat-value {
+    font-size: 1.75rem;
+    font-weight: bold;
+    color: var(--text-dark);
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    margin-top: 0.25rem;
+}
+
+/* Project Breakdown */
+.project-breakdown {
+    background: var(--bg-light);
+    padding: 1.5rem;
+    border-radius: 10px;
+}
+
+.project-breakdown h4 {
+    margin: 0 0 1rem 0;
+    color: var(--text-dark);
+}
+
+.project-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.project-item {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.project-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.project-name {
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.project-time {
+    color: var(--text-light);
+    font-size: 0.9rem;
+}
+
+.progress-bar {
+    height: 8px;
+    background: var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--primary-dark));
+    border-radius: 10px;
+    transition: width 1s ease;
+}
+
+.no-worklogs {
+    text-align: center;
+    padding: 3rem 2rem;
+    background: var(--bg-light);
+    border-radius: 10px;
+}
+
+.no-worklogs p {
+    color: var(--text-light);
+    margin-bottom: 1.5rem;
+}
+
+/* Features Section */
+.features-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+}
+
+.features-section h3 {
+    margin: 0 0 1.5rem 0;
+    color: var(--text-dark);
 }
 
 .features-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1.5rem;
-    margin-top: 1.5rem;
 }
 
 .feature-card {
-    background: #f8f9fa;
     padding: 1.5rem;
-    border-radius: 8px;
-    border-left: 4px solid #667eea;
+    background: var(--bg-light);
+    border-radius: 10px;
+    border-left: 4px solid var(--primary-color);
+    transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+    border-left-color: var(--primary-dark);
+}
+
+.feature-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
 }
 
 .feature-card h4 {
     margin: 0 0 0.5rem 0;
-    color: #333;
+    color: var(--text-dark);
 }
 
 .feature-card p {
     margin: 0;
-    color: #6c757d;
+    color: var(--text-light);
     font-size: 0.9rem;
+    line-height: 1.5;
 }
 
-.recent-activity {
-    background: white;
-    padding: 2rem;
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.getting-started-steps {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 2rem;
-    margin-top: 1.5rem;
-}
-
-.step {
-    display: flex;
-    gap: 1rem;
-    align-items: flex-start;
-}
-
-.step-number {
-    background: #667eea;
-    color: white;
-    width: 2rem;
-    height: 2rem;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    flex-shrink: 0;
-}
-
-.step-content h4 {
-    margin: 0 0 0.5rem 0;
-    color: #333;
-}
-
-.step-content p {
-    margin: 0 0 1rem 0;
-    color: #6c757d;
-    font-size: 0.9rem;
-}
-
-/* Button enhancements */
+/* Buttons */
 .btn {
     display: inline-block;
-    padding: 0.5rem 1rem;
+    padding: 0.65rem 1.25rem;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
     text-decoration: none;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
+    font-weight: 500;
     text-align: center;
     transition: all 0.3s ease;
 }
 
 .btn-primary {
-    background: #007bff;
+    background: var(--primary-color);
     color: white;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(99, 102, 241, 0.3);
 }
 
 .btn-secondary {
-    background: #6c757d;
+    background: #6b7280;
     color: white;
+}
+
+.btn-secondary:hover {
+    background: #4b5563;
 }
 
 .btn-success {
-    background: #28a745;
+    background: var(--success-color);
     color: white;
 }
 
-.btn-warning {
-    background: #ffc107;
-    color: #212529;
+.btn-success:hover {
+    background: #059669;
 }
 
-.btn-edit {
-    background: #17a2b8;
+.btn-danger {
+    background: var(--danger-color);
     color: white;
 }
 
-.btn-info {
-    background: #6f42c1;
-    color: white;
+.btn-danger:hover {
+    background: #dc2626;
 }
 
 .btn-sm {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
 }
 
-.btn:hover {
-    opacity: 0.8;
-    transform: translateY(-1px);
+.btn-block {
+    display: block;
+    width: 100%;
 }
 
-/* Responsive design */
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-20px);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.6s ease-out;
+}
+
+.animate-fade-in-delay {
+    animation: fadeIn 0.6s ease-out 0.2s both;
+}
+
+.animate-slide-in {
+    animation: slideIn 0.6s ease-out;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .main-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 @media (max-width: 768px) {
-    .dashboard-stats {
-        grid-template-columns: 1fr;
+    .dashboard {
+        padding: 1rem;
     }
-    
-    .instances-grid {
-        grid-template-columns: 1fr;
+
+    .header-content h1 {
+        font-size: 1.75rem;
     }
-    
-    .features-grid {
-        grid-template-columns: 1fr;
+
+    .header-content p {
+        font-size: 1rem;
     }
-    
+
     .getting-started-steps {
         grid-template-columns: 1fr;
     }
-    
-    .instance-header {
+
+    .main-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .quick-actions-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .features-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .invite-card {
         flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
         gap: 0.5rem;
     }
-    
-    .instance-actions {
-        justify-content: flex-start;
+}
+
+@media (max-width: 480px) {
+    .step-card {
+        flex-direction: column;
+    }
+
+    .stat-box {
+        flex-direction: column;
+        text-align: center;
     }
 }
 </style>

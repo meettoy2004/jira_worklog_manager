@@ -50,9 +50,110 @@ def create_app():
     @login_required
     def dashboard():
         from app.models import JiraInstance, TeamInvite
+        from datetime import datetime, timedelta
+        import requests
+        import base64
+        import logging
+
+        logger = logging.getLogger(__name__)
+
         instances = JiraInstance.query.filter_by(user_id=current_user.id).all()
         pending_invites = current_user.get_pending_invites()
-        return render_template('dashboard.html', instances=instances, pending_invites=pending_invites)
+
+        # Fetch worklog statistics for the last 30 days
+        end_date = datetime.now().date()
+        start_date = end_date - timedelta(days=30)
+
+        weekly_stats = {
+            'total_time_seconds': 0,
+            'total_worklogs': 0,
+            'days_logged': 0,
+            'daily_breakdown': {},
+            'project_breakdown': {}
+        }
+
+        # Fetch worklogs from all active instances
+        for instance in instances:
+            if not instance.is_active:
+                continue
+
+            try:
+                # Build JQL query
+                jql = f'worklogAuthor = currentUser() AND worklogDate >= "{start_date}" AND worklogDate <= "{end_date}"'
+
+                url = f"{instance.base_url}/rest/api/3/search/jql"
+                params = {
+                    'jql': jql,
+                    'fields': 'summary,project,worklog',
+                    'maxResults': 1000
+                }
+
+                auth_string = f"{instance.jira_username}:{instance.get_jira_password()}"
+                auth_bytes = base64.b64encode(auth_string.encode()).decode()
+
+                headers = {
+                    'Authorization': f'Basic {auth_bytes}',
+                    'Content-Type': 'application/json'
+                }
+
+                response = requests.get(url, params=params, headers=headers, verify=False, timeout=10)
+
+                if response.status_code == 200:
+                    data = response.json()
+                    issues = data.get('issues', [])
+
+                    for issue in issues:
+                        worklog_data = issue['fields'].get('worklog', {})
+                        worklogs = worklog_data.get('worklogs', [])
+                        project_key = issue['fields']['project']['key']
+
+                        for wl in worklogs:
+                            started = wl.get('started', '')
+                            worklog_date = started.split('T')[0]
+
+                            # Check if within date range
+                            if start_date.isoformat() <= worklog_date <= end_date.isoformat():
+                                time_seconds = wl.get('timeSpentSeconds', 0)
+                                weekly_stats['total_time_seconds'] += time_seconds
+                                weekly_stats['total_worklogs'] += 1
+
+                                # Daily breakdown
+                                if worklog_date not in weekly_stats['daily_breakdown']:
+                                    weekly_stats['daily_breakdown'][worklog_date] = 0
+                                weekly_stats['daily_breakdown'][worklog_date] += time_seconds
+
+                                # Project breakdown
+                                if project_key not in weekly_stats['project_breakdown']:
+                                    weekly_stats['project_breakdown'][project_key] = 0
+                                weekly_stats['project_breakdown'][project_key] += time_seconds
+
+            except Exception as e:
+                logger.error(f"Error fetching worklogs from {instance.alias}: {str(e)}")
+                continue
+
+        # Calculate days logged
+        weekly_stats['days_logged'] = len(weekly_stats['daily_breakdown'])
+
+        # Format time
+        total_hours = weekly_stats['total_time_seconds'] // 3600
+        total_minutes = (weekly_stats['total_time_seconds'] % 3600) // 60
+        weekly_stats['total_time_formatted'] = f"{total_hours}h {total_minutes}m"
+
+        # Calculate average per day
+        if weekly_stats['days_logged'] > 0:
+            avg_seconds = weekly_stats['total_time_seconds'] / weekly_stats['days_logged']
+            avg_hours = int(avg_seconds // 3600)
+            avg_minutes = int((avg_seconds % 3600) // 60)
+            weekly_stats['avg_per_day'] = f"{avg_hours}h {avg_minutes}m"
+        else:
+            weekly_stats['avg_per_day'] = "0h 0m"
+
+        return render_template('dashboard.html',
+                             instances=instances,
+                             pending_invites=pending_invites,
+                             weekly_stats=weekly_stats,
+                             start_date=start_date,
+                             end_date=end_date)
 
     @app.route('/accept-invite/<int:invite_id>')
     @login_required
